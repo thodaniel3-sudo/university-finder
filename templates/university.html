@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}{{ university.name }} — University Finder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <a href="{{ url_for('universities.list_view') }}"
+       class="btn btn-sm btn-outline-secondary mb-3">
+        <i class="bi bi-arrow-left me-2"></i>All universities
+    </a>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <h1 class="fw-bold mb-2">{{ university.name }}</h1>
+            <p class="text-muted mb-3">
+                <i class="bi bi-geo-alt me-1"></i>
+                {% if university.city %}{{ university.city }}, {% endif %}
+                {% if university.state_region %}{{ university.state_region }}, {% endif %}
+                {{ university.country }}
+            </p>
+
+            {% if university.description %}
+                <p>{{ university.description }}</p>
+            {% endif %}
+
+            <div class="d-flex flex-wrap gap-2">
+                {% if university.website_url %}
+                    <a href="{{ university.website_url }}" target="_blank"
+                       rel="noopener noreferrer" class="btn btn-primary">
+                        <i class="bi bi-box-arrow-up-right me-1"></i>Official website
+                    </a>
+                {% endif %}
+                {% if university.official_email %}
+                    <a href="mailto:{{ university.official_email }}"
+                       class="btn btn-outline-secondary">
+                        <i class="bi bi-envelope me-1"></i>{{ university.official_email }}
+                    </a>
+                {% else %}
+                    <span class="btn btn-outline-secondary disabled" aria-disabled="true">
+                        <i class="bi bi-envelope me-1"></i>Contact email unknown
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <h2 class="fw-bold mb-3">
+        Programmes
+        <span class="text-muted fs-6">
+            ({{ university.programmes|length }})
+        </span>
+    </h2>
+
+    {% if university.programmes %}
+        <div class="row g-4">
+            {% for prog in university.programmes %}
+                {% set req = prog.admission_requirements[0] if prog.admission_requirements else None %}
+                <div class="col-lg-6">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body">
+                            <h5 class="card-title mb-1">{{ prog.programme_name }}</h5>
+                            <p class="text-muted small mb-2">
+                                <span class="badge bg-primary">{{ prog.degree_level }}</span>
+                                {% if prog.field %}
+                                    <span class="badge bg-info text-dark">{{ prog.field }}</span>
+                                {% endif %}
+                                {% if prog.study_mode %}
+                                    <span class="badge bg-secondary">{{ prog.study_mode }}</span>
+                                {% endif %}
+                            </p>
+                            {% if prog.duration %}
+                                <p class="small mb-2"><strong>Duration:</strong> {{ prog.duration }}</p>
+                            {% endif %}
+
+                            {% if req %}
+                                <hr class="my-2">
+                                <h6 class="small fw-bold mb-2">Documented requirements</h6>
+                                <ul class="small mb-2">
+                                    {% if req.minimum_cgpa is not none and req.minimum_cgpa_scale is not none %}
+                                        <li>Minimum CGPA: {{ req.minimum_cgpa }}/{{ req.minimum_cgpa_scale }}</li>
+                                    {% else %}
+                                        <li class="text-muted">Minimum CGPA: <em>Unknown — verify with university</em></li>
+                                    {% endif %}
+                                    {% if req.minimum_degree %}
+                                        <li>Minimum degree: {{ req.minimum_degree }}</li>
+                                    {% endif %}
+                                    {% if req.required_field %}
+                                        <li>Required field: {{ req.required_field }}</li>
+                                    {% endif %}
+                                    {% if req.ielts_required %}
+                                        <li>IELTS: required, minimum {{ req.ielts_minimum_score or "unspecified" }}</li>
+                                    {% elif req.ielts_required is not none %}
+                                        <li>IELTS: not required</li>
+                                    {% endif %}
+                                    {% if req.toefl_required %}
+                                        <li>TOEFL: required, minimum {{ req.toefl_minimum_score or "unspecified" }}</li>
+                                    {% elif req.toefl_required is not none %}
+                                        <li>TOEFL: not required</li>
+                                    {% endif %}
+                                    {% if req.gre_required %}
+                                        <li>GRE: required</li>
+                                    {% endif %}
+                                    {% if req.work_experience_required %}
+                                        <li>Work experience: {{ req.work_experience_required }}</li>
+                                    {% endif %}
+                                </ul>
+                                <p class="small text-muted mb-0">
+                                    <i class="bi bi-shield-exclamation me-1"></i>
+                                    Status: {{ req.verification_status }}
+                                    {% if req.source_url %}
+                                        · <a href="{{ req.source_url }}"
+                                             target="_blank" rel="noopener noreferrer">source</a>
+                                    {% endif %}
+                                </p>
+                            {% else %}
+                                <p class="small text-muted mb-0">
+                                    <i class="bi bi-exclamation-circle me-1"></i>
+                                    No admission requirements recorded yet.
+                                </p>
+                            {% endif %}
+
+                            {% if prog.programme_url %}
+                                <a href="{{ prog.programme_url }}" target="_blank"
+                                   rel="noopener noreferrer"
+                                   class="btn btn-sm btn-outline-primary mt-3">
+                                    Programme page <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            No programmes recorded for this university yet.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
