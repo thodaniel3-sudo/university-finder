@@ -2,7 +2,7 @@
 
 from flask import Flask, render_template
 from flask_wtf.csrf import CSRFProtect
-
+from routes.saved_routes import saved_bp
 from config import Config
 from routes.auth_routes import auth_bp
 from routes.profile_routes import profile_bp
@@ -37,7 +37,7 @@ def create_app(config_class=Config):
     app.register_blueprint(profile_bp)       # /profile
     app.register_blueprint(university_bp)    # /universities, /universities/<id>
     app.register_blueprint(programme_bp)     # /programmes/<id>, save/unsave
-
+    app.register_blueprint(saved_bp)         # /saved
     # ----- Public routes -----
     @app.route("/")
     def index():

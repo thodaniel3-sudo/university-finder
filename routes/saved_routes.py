@@ -1,0 +1,77 @@
+"""
+Saved programmes list page.
+
+Reading the list uses the user client (RLS enforces ownership).
+Unsaving reuses the /programmes/<id>/unsave route from Phase 11 —
+no duplicate logic here.
+"""
+
+from flask import Blueprint, render_template
+
+from services.auth_decorators import current_user, login_required
+from services.matching_service import STATUS_COLORS, STATUS_LABELS, match_programme
+from services.profile_service import get_profile
+from services.saved_service import list_saved_programmes
+
+saved_bp = Blueprint("saved", __name__)
+
+
+def _normalise_requirements(raw):
+    """Accept list or dict shape from Supabase; return one dict or None."""
+    if isinstance(raw, list):
+        return raw[0] if raw else None
+    if isinstance(raw, dict):
+        return raw
+    return None
+
+
+def _normalise_university(raw):
+    """Supabase returns the nested university as list or dict."""
+    if isinstance(raw, list):
+        return raw[0] if raw else {}
+    if isinstance(raw, dict):
+        return raw
+    return {}
+
+
+@saved_bp.route("/saved")
+@login_required
+def list_view():
+    user = current_user()
+    rows = list_saved_programmes(user["id"], user["access_token"]) or []
+
+    # Load profile once — used for optional match computations.
+    try:
+        profile = get_profile(user["id"], user["access_token"])
+    except Exception:
+        profile = None
+
+    saved_items = []
+    for row in rows:
+        prog = row.get("programmes") or {}
+        if isinstance(prog, list):
+            prog = prog[0] if prog else {}
+        if not prog:
+            continue
+
+        uni = _normalise_university(prog.get("universities"))
+        req = _normalise_requirements(prog.get("admission_requirements"))
+
+        match = None
+        if profile:
+            match = match_programme(profile, prog, req)
+
+        saved_items.append({
+            "saved_at": row.get("created_at"),
+            "programme": prog,
+            "university": uni,
+            "requirements": req,
+            "match": match,
+        })
+
+    return render_template(
+        "saved.html",
+        saved_items=saved_items,
+        status_labels=STATUS_LABELS,
+        status_colors=STATUS_COLORS,
+    )

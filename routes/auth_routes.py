@@ -16,6 +16,7 @@ from services.auth_decorators import current_user, login_required
 from services.auth_service import AuthError, authenticate_user, register_user
 from services.forms import LoginForm, RegisterForm
 from services.profile_service import get_profile, profile_completion
+from services.saved_service import list_saved_programme_ids
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -96,8 +97,19 @@ def dashboard():
     user = current_user()
     profile = get_profile(user["id"], user["access_token"])
     completion = profile_completion(profile)
+
+    # Count saved programmes so the dashboard can show it.
+    # Wrap in try/except so a transient Supabase error doesn't
+    # break the whole dashboard — the count just falls back to 0.
+    try:
+        saved_ids = list_saved_programme_ids(user["id"], user["access_token"])
+        saved_count = len(saved_ids)
+    except Exception:
+        saved_count = 0
+
     return render_template(
         "dashboard.html",
         user=user,
         completion=completion,
+        saved_count=saved_count,
     )

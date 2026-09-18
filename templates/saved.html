@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Saved programmes — University Finder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h1 class="fw-bold mb-0">Saved programmes</h1>
+            <p class="text-muted mb-0">
+                {{ saved_items|length }}
+                programme{{ "" if saved_items|length == 1 else "s" }} saved.
+            </p>
+        </div>
+        <a href="{{ url_for('universities.list_view') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-search me-2"></i>Browse more
+        </a>
+    </div>
+
+    {% if saved_items %}
+        <div class="row g-4">
+            {% for item in saved_items %}
+                {% set prog = item.programme %}
+                {% set uni = item.university %}
+                {% set match = item.match %}
+                <div class="col-lg-6">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-0">
+                                    <a href="{{ url_for('programmes.detail_view', programme_id=prog.id) }}"
+                                       class="text-decoration-none">
+                                        {{ prog.programme_name }}
+                                    </a>
+                                </h5>
+                                {% if match %}
+                                    <span class="badge bg-{{ match.requirements[0].color if match.requirements else 'secondary' }}"
+                                          title="{{ status_labels[match.overall_status] }}">
+                                        {{ match.meets_count }}/{{ match.total_count }} met
+                                    </span>
+                                {% endif %}
+                            </div>
+
+                            <p class="text-muted small mb-2">
+                                <i class="bi bi-building me-1"></i>
+                                {% if uni.id %}
+                                    <a href="{{ url_for('universities.detail_view', university_id=uni.id) }}"
+                                       class="text-decoration-none">
+                                        {{ uni.name }}
+                                    </a>
+                                {% else %}
+                                    {{ uni.name }}
+                                {% endif %}
+                                {% if uni.city %}· {{ uni.city }}{% endif %}
+                                {% if uni.country %}· {{ uni.country }}{% endif %}
+                            </p>
+
+                            <p class="small mb-2">
+                                <span class="badge bg-primary">{{ prog.degree_level }}</span>
+                                {% if prog.field %}
+                                    <span class="badge bg-info text-dark">{{ prog.field }}</span>
+                                {% endif %}
+                                {% if prog.study_mode %}
+                                    <span class="badge bg-secondary">{{ prog.study_mode }}</span>
+                                {% endif %}
+                            </p>
+
+                            {% if match %}
+                                {% set overall = match.overall_status %}
+                                <div class="alert alert-{{ match.requirements[0].color if match.requirements else 'secondary' }} py-2 px-3 small mb-3">
+                                    <strong>Your match:</strong> {{ status_labels[overall] }}
+                                </div>
+                            {% elif current_user %}
+                                <div class="alert alert-secondary py-2 px-3 small mb-3">
+                                    Complete your profile to see your match.
+                                </div>
+                            {% endif %}
+
+                            <div class="d-flex gap-2 mt-3">
+                                <a href="{{ url_for('programmes.detail_view', programme_id=prog.id) }}"
+                                   class="btn btn-sm btn-primary">
+                                    View programme
+                                    <i class="bi bi-arrow-right ms-1"></i>
+                                </a>
+                                <form method="post"
+                                      action="{{ url_for('programmes.unsave_view', programme_id=prog.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-bookmark-x me-1"></i>Remove
+                                    </button>
+                                </form>
+                            </div>
+
+                            {% if item.saved_at %}
+                                <p class="text-muted small mt-3 mb-0">
+                                    <i class="bi bi-clock me-1"></i>
+                                    Saved on {{ item.saved_at[:10] }}
+                                </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card shadow-sm border-0">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-bookmark" style="font-size: 3rem; color: #adb5bd;"></i>
+                <h4 class="fw-bold mt-3">No saved programmes yet</h4>
+                <p class="text-muted">
+                    Save programmes while browsing, and they'll show up here
+                    so you can compare them later.
+                </p>
+                <a href="{{ url_for('universities.list_view') }}"
+                   class="btn btn-primary mt-2">
+                    <i class="bi bi-search me-2"></i>Browse universities
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
