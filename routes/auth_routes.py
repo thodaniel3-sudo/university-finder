@@ -65,12 +65,21 @@ def login():
             flash(str(exc), "danger")
             return render_template("login.html", form=form)
 
+        # Store the access and refresh tokens for authenticated calls.
         session.clear()
         session["user_id"] = user["id"]
         session["user_email"] = user["email"]
         session["access_token"] = user["access_token"]
         session["refresh_token"] = user.get("refresh_token")
         session.permanent = bool(form.remember_me.data)
+
+        # Fetch is_admin from the user's profile and store in session.
+        # If the profile doesn't exist yet, treat as non-admin.
+        try:
+            profile = get_profile(user["id"], user["access_token"])
+            session["is_admin"] = bool(profile.get("is_admin")) if profile else False
+        except Exception:
+            session["is_admin"] = False
 
         flash("Welcome back.", "success")
 
@@ -94,7 +103,6 @@ def logout():
 def dashboard():
     user = current_user()
 
-    # Profile with JWT-refresh handling
     try:
         profile = get_profile(user["id"], user["access_token"])
     except Exception as exc:

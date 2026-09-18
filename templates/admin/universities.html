@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Universities — Admin{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="{{ url_for('admin.dashboard') }}" class="text-decoration-none small text-muted">
+                <i class="bi bi-arrow-left"></i> Back to admin
+            </a>
+            <h1 class="fw-bold mb-0 mt-2">Universities</h1>
+            <p class="text-muted mb-0">{{ universities|length }} total.</p>
+        </div>
+        <a href="{{ url_for('admin.universities_new') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Add university
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Country</th>
+                        <th>City</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in universities %}
+                        <tr>
+                            <td class="fw-semibold">{{ u.name }}</td>
+                            <td>{{ u.country }}</td>
+                            <td class="text-muted small">{{ u.city or "—" }}</td>
+                            <td>
+                                {% if u.status == 'active' %}
+                                    <span class="badge bg-success">{{ u.status }}</span>
+                                {% elif u.status == 'inactive' %}
+                                    <span class="badge bg-secondary">{{ u.status }}</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">{{ u.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <a href="{{ url_for('admin.universities_edit', university_id=u.id) }}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    Edit
+                                </a>
+                                <a href="{{ url_for('admin.programmes_new', university_id=u.id) }}"
+                                   class="btn btn-sm btn-outline-secondary">
+                                    + Programme
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

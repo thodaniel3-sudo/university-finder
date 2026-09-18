@@ -4,15 +4,11 @@ Flask-WTF handles CSRF tokens automatically when a form
 is rendered inside a template using {{ form.hidden_tag() }}.
 """
 
-
-
-from services.email_purposes import PURPOSE_CHOICES
-from flask_wtf.file import FileField, FileAllowed, FileRequired
-from services.application_statuses import STATUS_CHOICES as APPLICATION_STATUSES_CHOICES
-from wtforms import DateField
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileAllowed, FileField, FileRequired
 from wtforms import (
     BooleanField,
+    DateField,
     DecimalField,
     IntegerField,
     PasswordField,
@@ -30,9 +26,12 @@ from wtforms.validators import (
     Optional,
 )
 
+from services.application_statuses import STATUS_CHOICES as APPLICATION_STATUSES_CHOICES
+from services.email_purposes import PURPOSE_CHOICES
+
 
 # ============================================================
-# Choice constants for SelectField dropdowns
+# Shared choice constants
 # ============================================================
 
 DEGREE_LEVELS = [
@@ -202,7 +201,8 @@ class ProfileForm(FlaskForm):
 
     submit = SubmitField("Save profile")
 
-    # ============================================================
+
+# ============================================================
 # Application tracker form
 # ============================================================
 
@@ -235,8 +235,7 @@ class ApplicationForm(FlaskForm):
     submit = SubmitField("Save application")
 
 
-
-    # ============================================================
+# ============================================================
 # Document upload form
 # ============================================================
 
@@ -275,8 +274,7 @@ class DocumentUploadForm(FlaskForm):
     submit = SubmitField("Upload")
 
 
-
-    # ============================================================
+# ============================================================
 # Email forms
 # ============================================================
 
@@ -333,3 +331,95 @@ class EmailReviewForm(FlaskForm):
     )
     save_draft = SubmitField("Save as draft")
     send = SubmitField("Send email")
+
+
+# ============================================================
+# Admin forms
+# ============================================================
+
+ADMIN_DEGREE_LEVELS = [
+    ("Bachelor", "Bachelor's"),
+    ("Master", "Master's"),
+    ("PhD", "Doctorate (PhD)"),
+    ("Diploma", "Diploma"),
+    ("Certificate", "Certificate"),
+]
+
+VERIFICATION_STATUSES = [
+    ("unverified", "Unverified"),
+    ("verified", "Verified"),
+    ("unknown", "Unknown"),
+    ("requires_verification", "Requires verification"),
+    ("outdated", "Outdated"),
+]
+
+UNIVERSITY_STATUSES = [
+    ("active", "Active"),
+    ("inactive", "Inactive"),
+    ("pending_verification", "Pending verification"),
+]
+
+
+class AdminUniversityForm(FlaskForm):
+    name = StringField("Name", validators=[DataRequired(), Length(max=200)])
+    country = StringField("Country", validators=[DataRequired(), Length(max=100)])
+    state_region = StringField("State / region", validators=[Optional(), Length(max=100)])
+    city = StringField("City", validators=[Optional(), Length(max=100)])
+    website_url = StringField("Website URL", validators=[Optional(), Length(max=500)])
+    official_email = StringField(
+        "Official email",
+        validators=[Optional(), Email(message="Enter a valid email or leave blank."), Length(max=320)],
+    )
+    description = TextAreaField("Description", validators=[Optional(), Length(max=2000)])
+    source_url = StringField("Source URL", validators=[Optional(), Length(max=500)])
+    status = SelectField("Status", choices=UNIVERSITY_STATUSES, validators=[DataRequired()])
+    submit = SubmitField("Save university")
+
+
+class AdminProgrammeForm(FlaskForm):
+    university_id = SelectField("University", coerce=int, validators=[DataRequired()])
+    programme_name = StringField("Programme name", validators=[DataRequired(), Length(max=300)])
+    degree_level = SelectField("Degree level", choices=ADMIN_DEGREE_LEVELS, validators=[DataRequired()])
+    field = StringField("Field", validators=[Optional(), Length(max=200)])
+    specialization = StringField("Specialization", validators=[Optional(), Length(max=200)])
+    language = StringField("Language", validators=[Optional(), Length(max=100)])
+    study_mode = StringField("Study mode", validators=[Optional(), Length(max=100)])
+    duration = StringField("Duration", validators=[Optional(), Length(max=100)])
+    programme_url = StringField("Programme URL", validators=[Optional(), Length(max=500)])
+    application_url = StringField("Application URL", validators=[Optional(), Length(max=500)])
+    status = SelectField("Status", choices=UNIVERSITY_STATUSES, validators=[DataRequired()])
+    submit = SubmitField("Save programme")
+
+
+class AdminRequirementsForm(FlaskForm):
+    minimum_cgpa = DecimalField(
+        "Minimum CGPA", places=2,
+        validators=[Optional(), NumberRange(min=0, max=10)],
+    )
+    minimum_cgpa_scale = DecimalField(
+        "CGPA scale", places=2,
+        validators=[Optional(), NumberRange(min=1, max=10)],
+    )
+    minimum_degree = StringField("Minimum degree", validators=[Optional(), Length(max=200)])
+    required_field = StringField("Required field", validators=[Optional(), Length(max=200)])
+    english_requirement = StringField("English requirement", validators=[Optional(), Length(max=300)])
+    ielts_required = BooleanField("IELTS required")
+    ielts_minimum_score = DecimalField(
+        "IELTS minimum score", places=1,
+        validators=[Optional(), NumberRange(min=0, max=9)],
+    )
+    toefl_required = BooleanField("TOEFL required")
+    toefl_minimum_score = IntegerField(
+        "TOEFL minimum score",
+        validators=[Optional(), NumberRange(min=0, max=120)],
+    )
+    gre_required = BooleanField("GRE required")
+    work_experience_required = StringField("Work experience required", validators=[Optional(), Length(max=200)])
+    other_requirements = TextAreaField("Other requirements", validators=[Optional(), Length(max=2000)])
+    source_url = StringField("Source URL", validators=[Optional(), Length(max=500)])
+    verification_status = SelectField(
+        "Verification status",
+        choices=VERIFICATION_STATUSES,
+        validators=[DataRequired()],
+    )
+    submit = SubmitField("Save requirements")

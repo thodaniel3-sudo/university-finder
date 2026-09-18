@@ -38,71 +38,87 @@
             </button>
 
             <div class="collapse navbar-collapse" id="mainNav">
-
                 <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-    <li class="nav-item">
-        <a class="nav-link" href="{{ url_for('index') }}">Home</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link" href="{{ url_for('about') }}">About</a>
-    </li>
-   <li class="nav-item">
-    <a class="nav-link" href="{{ url_for('universities.list_view') }}">
-        Universities
-    </a>
-</li>
-{% if current_user %}
-    <li class="nav-item">
-        <a class="nav-link" href="{{ url_for('saved.list_view') }}">
-            Saved
-        </a>
-        <li class="nav-item">
-    <a class="nav-link" href="{{ url_for('applications.list_view') }}">
-        Applications
-    </a>
-    <li class="nav-item">
-    <a class="nav-link" href="{{ url_for('documents.list_view') }}">
-        Documents
-    </a>
-</li>
-</li>
-    </li>
-{% endif %}
 
-    {% if current_user %}
-        <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('auth.dashboard') }}">
-                <i class="bi bi-speedometer2 me-1"></i>Dashboard
-            </a>
-        </li>
-        <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" role="button"
-               data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-person-circle me-1"></i>{{ current_user.email }}
-            </a>
+                    {# ---- Public links (everyone) ---- #}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('about') }}">About</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('universities.list_view') }}">
+                            Universities
+                        </a>
+                    </li>
 
-            <ul class="dropdown-menu dropdown-menu-end">
-<li class="nav-item">
-    <a class="nav-link" href="{{ url_for('emails.list_view') }}">
-        Emails
-    </a>
-</li>
-                <li>
-                    <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
-                        <i class="bi bi-box-arrow-right me-2"></i>Log out
-                    </a>
-                </li>
-            </ul>
-        </li>
-    {% else %}
-        <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('auth.login') }}">Log in</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('auth.register') }}">Register</a>
-        </li>
-    {% endif %}
-</ul>
+                    {% if current_user %}
+                        {# ---- Logged-in links ---- #}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('saved.list_view') }}">
+                                Saved
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('applications.list_view') }}">
+                                Applications
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('documents.list_view') }}">
+                                Documents
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('emails.list_view') }}">
+                                Emails
+                            </a>
+                        </li>
+
+                        {% if current_user.is_admin %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin.dashboard') }}">
+                                    <i class="bi bi-shield-lock me-1"></i>Admin
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        {# ---- User dropdown ---- #}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button"
+                               data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-person-circle me-1"></i>{{ current_user.email }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('auth.dashboard') }}">
+                                        <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('profile.view_profile') }}">
+                                        <i class="bi bi-person-vcard me-2"></i>My profile
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
+                                        <i class="bi bi-box-arrow-right me-2"></i>Log out
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        {# ---- Logged-out links ---- #}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('auth.login') }}">Log in</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('auth.register') }}">Register</a>
+                        </li>
+                    {% endif %}
+                </ul>
             </div>
         </div>
     </nav>
