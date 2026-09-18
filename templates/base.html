@@ -80,7 +80,13 @@
                data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-person-circle me-1"></i>{{ current_user.email }}
             </a>
+
             <ul class="dropdown-menu dropdown-menu-end">
+<li class="nav-item">
+    <a class="nav-link" href="{{ url_for('emails.list_view') }}">
+        Emails
+    </a>
+</li>
                 <li>
                     <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
                         <i class="bi bi-box-arrow-right me-2"></i>Log out

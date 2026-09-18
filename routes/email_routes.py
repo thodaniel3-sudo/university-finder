@@ -1,0 +1,249 @@
+"""
+Email generation and (in Phase 16) sending.
+"""
+
+from flask import (
+    Blueprint,
+    abort,
+    flash,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
+
+from services.auth_decorators import current_user, login_required
+from services.email_generator import generate_email_draft
+from services.email_purposes import PURPOSE_LABELS
+from services.email_service import (
+    create_draft,
+    delete_email,
+    get_email,
+    list_emails,
+)
+from services.forms import EmailComposeForm, EmailReviewForm
+from services.profile_service import get_profile
+from services.supabase_service import get_public_client
+
+email_bp = Blueprint("emails", __name__)
+
+
+def _normalise_nested(raw):
+    """Supabase returns one-to-one nested selects as list or dict."""
+    if isinstance(raw, list):
+        return raw[0] if raw else None
+    if isinstance(raw, dict):
+        return raw
+    return None
+
+
+@email_bp.route("/emails")
+@login_required
+def list_view():
+    user = current_user()
+    try:
+        rows = list_emails(user["id"], user["access_token"])
+    except Exception:
+        rows = []
+
+    items = []
+    for row in rows:
+        uni = _normalise_nested(row.get("universities")) or {}
+        prog = _normalise_nested(row.get("programmes")) or {}
+        items.append({
+            "id": row.get("id"),
+            "status": row.get("status"),
+            "email_type": row.get("email_type"),
+            "email_type_label": PURPOSE_LABELS.get(row.get("email_type"), "—"),
+            "recipient_email": row.get("recipient_email"),
+            "subject": row.get("subject"),
+            "sent_at": row.get("sent_at"),
+            "created_at": row.get("created_at"),
+            "updated_at": row.get("updated_at"),
+            "error_message": row.get("error_message"),
+            "university": uni,
+            "programme": prog,
+        })
+
+    return render_template(
+        "emails.html",
+        emails=items,
+        purpose_labels=PURPOSE_LABELS,
+    )
+
+
+@email_bp.route("/emails/compose", methods=["GET", "POST"])
+@login_required
+def compose_view():
+    user = current_user()
+    form = EmailComposeForm()
+
+    client = get_public_client()
+
+    # Load dropdown options
+    uni_resp = (
+        client.table("universities")
+        .select("id, name, country")
+        .eq("status", "active")
+        .order("name")
+        .execute()
+    )
+    universities = uni_resp.data or []
+
+    prog_resp = (
+        client.table("programmes")
+        .select("id, university_id, programme_name, degree_level")
+        .eq("status", "active")
+        .order("programme_name")
+        .execute()
+    )
+    programmes = prog_resp.data or []
+
+    # Populate choices at runtime.
+    form.university_id.choices = [(0, "-- select --")] + [
+        (u["id"], f"{u['name']} ({u.get('country', '')})") for u in universities
+    ]
+    form.programme_id.choices = [(0, "-- none --")] + [
+        (p["id"], f"{p['programme_name']} — {p.get('degree_level', '')}") for p in programmes
+    ]
+
+    if form.validate_on_submit():
+        university_id = form.university_id.data or 0
+        programme_id = form.programme_id.data or 0
+
+        if not university_id:
+            flash("Please select a university.", "danger")
+            return render_template("email_compose.html", form=form)
+
+        # Load university
+        uni_resp = (
+            client.table("universities")
+            .select("*")
+            .eq("id", university_id)
+            .limit(1)
+            .execute()
+        )
+        if not uni_resp.data:
+            flash("University not found.", "danger")
+            return render_template("email_compose.html", form=form)
+        university = uni_resp.data[0]
+
+        # Load programme (optional)
+        programme = None
+        if programme_id:
+            prog_resp = (
+                client.table("programmes")
+                .select("*")
+                .eq("id", programme_id)
+                .limit(1)
+                .execute()
+            )
+            if prog_resp.data:
+                programme = prog_resp.data[0]
+
+        # Require a profile
+        profile = get_profile(user["id"], user["access_token"])
+        if not profile:
+            flash(
+                "Please complete your profile first so we can generate a "
+                "personalised draft.",
+                "warning",
+            )
+            return redirect(url_for("profile.view_profile"))
+
+        # Generate draft
+        draft = generate_email_draft(
+            profile=profile,
+            university=university,
+            programme=programme,
+            purpose=form.email_type.data,
+        )
+
+        recipient = (
+            university.get("official_email")
+            or "admissions@example.com"
+        )
+
+        session["email_draft"] = {
+            "recipient_email": recipient,
+            "subject": draft["subject"],
+            "body": draft["body"],
+            "email_type": form.email_type.data,
+            "university_id": university["id"],
+            "programme_id": programme["id"] if programme else None,
+        }
+        return redirect(url_for("emails.review_view"))
+
+    return render_template("email_compose.html", form=form)
+
+
+@email_bp.route("/emails/review", methods=["GET", "POST"])
+@login_required
+def review_view():
+    draft = session.get("email_draft")
+    if not draft:
+        flash("No draft to review. Start a new email.", "warning")
+        return redirect(url_for("emails.compose_view"))
+
+    user = current_user()
+    form = EmailReviewForm()
+
+    if form.validate_on_submit():
+        try:
+            row = create_draft(
+                user_id=user["id"],
+                access_token=user["access_token"],
+                recipient_email=form.recipient_email.data,
+                reply_to=user["email"],
+                subject=form.subject.data,
+                body=form.body.data,
+                email_type=form.email_type.data,
+                university_id=draft.get("university_id"),
+                programme_id=draft.get("programme_id"),
+            )
+        except Exception as exc:
+            flash(f"Could not save draft: {exc}", "danger")
+            return render_template("email_review.html", form=form)
+
+        session.pop("email_draft", None)
+
+        flash(
+            "Draft saved. Phase 16 will add the send flow.",
+            "success",
+        )
+        return redirect(url_for("emails.detail_view", email_id=row["id"]))
+
+    if not form.is_submitted():
+        form.recipient_email.data = draft.get("recipient_email", "")
+        form.subject.data = draft.get("subject", "")
+        form.body.data = draft.get("body", "")
+        form.email_type.data = draft.get("email_type", "general_inquiry")
+
+    return render_template("email_review.html", form=form)
+
+
+@email_bp.route("/emails/<int:email_id>")
+@login_required
+def detail_view(email_id: int):
+    user = current_user()
+    row = get_email(user["id"], user["access_token"], email_id)
+    if row is None:
+        abort(404)
+
+    return render_template(
+        "email.html",
+        email=row,
+        university=_normalise_nested(row.get("universities")) or {},
+        programme=_normalise_nested(row.get("programmes")) or {},
+        purpose_labels=PURPOSE_LABELS,
+    )
+
+
+@email_bp.route("/emails/<int:email_id>/delete", methods=["POST"])
+@login_required
+def delete_view(email_id: int):
+    user = current_user()
+    delete_email(user["id"], user["access_token"], email_id)
+    flash("Draft deleted.", "info")
+    return redirect(url_for("emails.list_view"))

@@ -3,6 +3,10 @@ WTForms form definitions.
 Flask-WTF handles CSRF tokens automatically when a form
 is rendered inside a template using {{ form.hidden_tag() }}.
 """
+
+
+
+from services.email_purposes import PURPOSE_CHOICES
 from flask_wtf.file import FileField, FileAllowed, FileRequired
 from services.application_statuses import STATUS_CHOICES as APPLICATION_STATUSES_CHOICES
 from wtforms import DateField
@@ -269,3 +273,63 @@ class DocumentUploadForm(FlaskForm):
         ],
     )
     submit = SubmitField("Upload")
+
+
+
+    # ============================================================
+# Email forms
+# ============================================================
+
+class EmailComposeForm(FlaskForm):
+    """Pick purpose + university/programme; generate a draft."""
+
+    email_type = SelectField(
+        "Purpose",
+        choices=PURPOSE_CHOICES,
+        validators=[DataRequired()],
+    )
+    university_id = SelectField(
+        "University",
+        coerce=int,
+        validators=[DataRequired()],
+    )
+    programme_id = SelectField(
+        "Programme (optional)",
+        coerce=int,
+        validators=[Optional()],
+    )
+    submit = SubmitField("Generate draft")
+
+
+class EmailReviewForm(FlaskForm):
+    """Review/edit a generated draft before saving."""
+
+    recipient_email = StringField(
+        "To",
+        validators=[
+            DataRequired(message="Recipient email is required."),
+            Email(message="Please enter a valid email address."),
+            Length(max=320),
+        ],
+    )
+    subject = StringField(
+        "Subject",
+        validators=[
+            DataRequired(message="Subject is required."),
+            Length(max=300),
+        ],
+    )
+    body = TextAreaField(
+        "Message",
+        validators=[
+            DataRequired(message="Message body is required."),
+            Length(max=20000),
+        ],
+    )
+    email_type = SelectField(
+        "Purpose",
+        choices=PURPOSE_CHOICES,
+        validators=[DataRequired()],
+    )
+    save_draft = SubmitField("Save as draft")
+    send = SubmitField("Send email")

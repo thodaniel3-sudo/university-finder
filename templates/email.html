@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}{{ email.subject }} — University Finder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <a href="{{ url_for('emails.list_view') }}"
+       class="btn btn-sm btn-outline-secondary mb-3">
+        <i class="bi bi-arrow-left me-2"></i>All emails
+    </a>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                <div>
+                    <h1 class="fw-bold mb-2">{{ email.subject }}</h1>
+                    <p class="text-muted mb-1">
+                        <strong>To:</strong> {{ email.recipient_email }}
+                    </p>
+                    {% if university.name %}
+                        <p class="text-muted small mb-1">
+                            <i class="bi bi-building me-1"></i>
+                            {{ university.name }}
+                            {% if programme.programme_name %}· {{ programme.programme_name }}{% endif %}
+                        </p>
+                    {% endif %}
+                    <p class="text-muted small mb-2">
+                        <strong>Purpose:</strong>
+                        {{ purpose_labels.get(email.email_type, email.email_type) }}
+                    </p>
+                    <p class="mb-0">
+                        {% if email.status == 'draft' %}
+                            <span class="badge bg-secondary">Draft</span>
+                        {% elif email.status == 'handed_off' %}
+                            <span class="badge bg-warning text-dark">Sent from your email app</span>
+                        {% elif email.status == 'sent' %}
+                            <span class="badge bg-success">Sent</span>
+                        {% elif email.status == 'failed' %}
+                            <span class="badge bg-danger">Failed</span>
+                        {% endif %}
+                        <span class="text-muted small ms-2">
+                            Created {{ (email.created_at or "")[:10] }}
+                            {% if email.sent_at %}· Sent {{ (email.sent_at or "")[:10] }}{% endif %}
+                        </span>
+                    </p>
+                </div>
+
+                <form method="post"
+                      action="{{ url_for('emails.delete_view', email_id=email.id) }}"
+                      onsubmit="return confirm('Delete this email? This cannot be undone.');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-trash me-1"></i>Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">
+                <i class="bi bi-file-text me-2"></i>Message
+            </h5>
+        </div>
+        <div class="card-body">
+            <pre style="white-space: pre-wrap; font-family: inherit; margin: 0;">{{ email.body }}</pre>
+        </div>
+    </div>
+
+    {% if email.status == 'draft' %}
+        <div class="card shadow-sm border-0 mt-4">
+            <div class="card-body text-center">
+                <h5 class="fw-bold mb-2">Ready to send?</h5>
+                <p class="text-muted small mb-3">
+                    Phase 16 will add the send flow. For now, you can copy
+                    the message and send it from your own email address.
+                </p>
+                <button type="button"
+                        class="btn btn-primary"
+                        onclick="navigator.clipboard.writeText(document.querySelector('pre').innerText); this.innerText='Copied!';">
+                    <i class="bi bi-clipboard me-1"></i>Copy message
+                </button>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

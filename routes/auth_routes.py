@@ -16,6 +16,7 @@ from services.application_service import count_applications
 from services.auth_decorators import current_user, login_required
 from services.auth_service import AuthError, authenticate_user, register_user
 from services.document_service import list_documents
+from services.email_service import list_emails
 from services.forms import LoginForm, RegisterForm
 from services.profile_service import get_profile, profile_completion
 from services.saved_service import list_saved_programme_ids
@@ -26,7 +27,6 @@ auth_bp = Blueprint("auth", __name__)
 
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
-    # If already logged in, skip straight to dashboard.
     if session.get("user_id"):
         return redirect(url_for("auth.dashboard"))
 
@@ -65,8 +65,6 @@ def login():
             flash(str(exc), "danger")
             return render_template("login.html", form=form)
 
-        # Store the access token for immediate use, and the refresh
-        # token so we can silently refresh when the access token expires.
         session.clear()
         session["user_id"] = user["id"]
         session["user_email"] = user["email"]
@@ -76,7 +74,6 @@ def login():
 
         flash("Welcome back.", "success")
 
-        # Support "next" redirect after login.
         next_url = request.args.get("next")
         if next_url and next_url.startswith("/"):
             return redirect(next_url)
@@ -87,9 +84,6 @@ def login():
 
 @auth_bp.route("/logout")
 def logout():
-    # Clear the Flask session. We don't call Supabase sign_out here
-    # because we don't store a persistent Supabase session object;
-    # Supabase will expire the tokens server-side eventually.
     session.clear()
     flash("You have been logged out.", "info")
     return redirect(url_for("index"))
@@ -100,14 +94,11 @@ def logout():
 def dashboard():
     user = current_user()
 
-    # The profile fetch is the first Supabase call. If the access token
-    # has expired, we try to refresh it and retry once. If refresh
-    # fails, we force the user back to login.
+    # Profile with JWT-refresh handling
     try:
         profile = get_profile(user["id"], user["access_token"])
     except Exception as exc:
         if handle_jwt_expired(exc):
-            # Token refreshed — reload user from session and retry.
             user = current_user()
             profile = get_profile(user["id"], user["access_token"])
         else:
@@ -116,26 +107,28 @@ def dashboard():
 
     completion = profile_completion(profile)
 
-    # Saved count — falls back to 0 if Supabase is unreachable.
     try:
         saved_ids = list_saved_programme_ids(user["id"], user["access_token"])
         saved_count = len(saved_ids)
     except Exception:
         saved_count = 0
 
-    # Applications count — same fallback pattern.
     try:
-        apps_count = count_applications(user["id"], user["access_token"])
-        applications_count = apps_count
+        applications_count = count_applications(user["id"], user["access_token"])
     except Exception:
         applications_count = 0
 
-    # Documents count — same fallback pattern.
     try:
         docs = list_documents(user["id"], user["access_token"])
         documents_count = len(docs)
     except Exception:
         documents_count = 0
+
+    try:
+        emails = list_emails(user["id"], user["access_token"])
+        emails_count = len(emails)
+    except Exception:
+        emails_count = 0
 
     return render_template(
         "dashboard.html",
@@ -144,4 +137,5 @@ def dashboard():
         saved_count=saved_count,
         applications_count=applications_count,
         documents_count=documents_count,
+        emails_count=emails_count,
     )

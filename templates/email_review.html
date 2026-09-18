@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Review draft — University Finder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <a href="{{ url_for('emails.compose_view') }}"
+       class="btn btn-sm btn-outline-secondary mb-3">
+        <i class="bi bi-arrow-left me-2"></i>Start over
+    </a>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4 p-md-5">
+                    <h1 class="fw-bold mb-2">Review your draft</h1>
+                    <p class="text-muted mb-4">
+                        Edit anything before saving. Nothing is sent until
+                        you click <strong>Send</strong> on the next page.
+                    </p>
+
+                    <form method="post" novalidate>
+                        {{ form.hidden_tag() }}
+
+                        <div class="mb-3">
+                            {{ form.email_type.label(class="form-label") }}
+                            {{ form.email_type(class="form-select" + (" is-invalid" if form.email_type.errors else "")) }}
+                            {% for e in form.email_type.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.recipient_email.label(class="form-label") }}
+                            {{ form.recipient_email(class="form-control" + (" is-invalid" if form.recipient_email.errors else ""),
+                                                     placeholder="admissions@university.edu") }}
+                            {% for e in form.recipient_email.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                            {% endfor %}
+                            <div class="form-text">
+                                The university's email address. Verify this
+                                on their website before sending.
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.subject.label(class="form-label") }}
+                            {{ form.subject(class="form-control" + (" is-invalid" if form.subject.errors else "")) }}
+                            {% for e in form.subject.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-4">
+                            {{ form.body.label(class="form-label") }}
+                            {{ form.body(class="form-control" + (" is-invalid" if form.body.errors else ""),
+                                          rows="16",
+                                          style="font-family: ui-monospace, monospace; font-size: 0.9rem;") }}
+                            {% for e in form.body.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            {{ form.save_draft(class="btn btn-primary") }}
+                            <a href="{{ url_for('emails.compose_view') }}"
+                               class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+
+                    <hr class="my-4">
+                    <p class="small text-muted mb-0">
+                        <i class="bi bi-shield-check me-1"></i>
+                        <strong>Reminder:</strong> University Finder will never
+                        send an email without your explicit confirmation.
+                        You'll review one more time before anything leaves
+                        your account.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Emails — University Finder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h1 class="fw-bold mb-0">Emails</h1>
+            <p class="text-muted mb-0">
+                {{ emails|length }}
+                email{{ "" if emails|length == 1 else "s" }} recorded.
+            </p>
+        </div>
+        <a href="{{ url_for('emails.compose_view') }}" class="btn btn-primary">
+            <i class="bi bi-pencil-square me-2"></i>Compose new email
+        </a>
+    </div>
+
+    {% if emails %}
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Subject</th>
+                            <th>Recipient</th>
+                            <th>Purpose</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th class="text-end"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for e in emails %}
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">
+                                        <a href="{{ url_for('emails.detail_view', email_id=e.id) }}"
+                                           class="text-decoration-none">
+                                            {{ e.subject }}
+                                        </a>
+                                    </div>
+                                    {% if e.university.name %}
+                                        <div class="small text-muted">
+                                            {{ e.university.name }}
+                                            {% if e.programme.programme_name %} · {{ e.programme.programme_name }}{% endif %}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td class="small">{{ e.recipient_email }}</td>
+                                <td class="small">{{ e.email_type_label }}</td>
+                                <td>
+                                    {% if e.status == 'draft' %}
+                                        <span class="badge bg-secondary">Draft</span>
+                                    {% elif e.status == 'handed_off' %}
+                                        <span class="badge bg-warning text-dark">Sent from your email app</span>
+                                    {% elif e.status == 'sent' %}
+                                        <span class="badge bg-success">Sent</span>
+                                    {% elif e.status == 'failed' %}
+                                        <span class="badge bg-danger">Failed</span>
+                                    {% endif %}
+                                </td>
+                                <td class="small text-muted">
+                                    {{ (e.created_at or "")[:10] }}
+                                </td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('emails.detail_view', email_id=e.id) }}"
+                                       class="btn btn-sm btn-outline-primary">
+                                        Open
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% else %}
+        <div class="card shadow-sm border-0">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-envelope" style="font-size: 3rem; color: #adb5bd;"></i>
+                <h4 class="fw-bold mt-3">No emails yet</h4>
+                <p class="text-muted">
+                    Compose an inquiry to a university and it will show up here.
+                </p>
+                <a href="{{ url_for('emails.compose_view') }}" class="btn btn-primary mt-2">
+                    <i class="bi bi-pencil-square me-2"></i>Compose email
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

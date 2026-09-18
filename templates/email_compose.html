@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Compose email — University Finder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <a href="{{ url_for('emails.list_view') }}"
+       class="btn btn-sm btn-outline-secondary mb-3">
+        <i class="bi bi-arrow-left me-2"></i>All emails
+    </a>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4 p-md-5">
+                    <h1 class="fw-bold mb-2">Compose a new email</h1>
+                    <p class="text-muted mb-4">
+                        We'll generate a polite draft you can edit before
+                        sending. Nothing is sent until you confirm.
+                    </p>
+
+                    <form method="post" novalidate>
+                        {{ form.hidden_tag() }}
+
+                        <div class="mb-3">
+                            {{ form.email_type.label(class="form-label") }}
+                            {{ form.email_type(class="form-select" + (" is-invalid" if form.email_type.errors else "")) }}
+                            {% for e in form.email_type.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                            {% endfor %}
+                            <div class="form-text">
+                                The purpose shapes the tone and content of the draft.
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.university_id.label(class="form-label") }}
+                            {{ form.university_id(class="form-select" + (" is-invalid" if form.university_id.errors else "")) }}
+                            {% for e in form.university_id.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-4">
+                            {{ form.programme_id.label(class="form-label") }}
+                            {{ form.programme_id(class="form-select" + (" is-invalid" if form.programme_id.errors else "")) }}
+                            {% for e in form.programme_id.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                            {% endfor %}
+                            <div class="form-text">
+                                Optional — choose a specific programme if your
+                                question is about one.
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            {{ form.submit(class="btn btn-primary btn-lg") }}
+                        </div>
+                    </form>
+
+                    <hr class="my-4">
+                    <p class="small text-muted mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        After you generate the draft, you'll be able to edit
+                        the recipient, subject, and message before sending.
+                        Your profile information is used to personalise the
+                        draft.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
