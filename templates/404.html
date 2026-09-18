@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Page not found — University Finder{% endblock %}
+
+{% block content %}
+<div class="container text-center py-5">
+    <div style="font-size: 6rem; line-height: 1;" class="text-primary">
+        <i class="bi bi-compass"></i>
+    </div>
+    <h1 class="fw-bold mt-4">404 — Page not found</h1>
+    <p class="text-muted mb-4">
+        The page you're looking for doesn't exist or has been moved.
+    </p>
+    <div class="d-flex justify-content-center gap-2">
+        <a href="{{ url_for('index') }}" class="btn btn-primary">
+            <i class="bi bi-house me-1"></i>Back to home
+        </a>
+        <a href="{{ url_for('universities.list_view') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-search me-1"></i>Browse universities
+        </a>
+    </div>
+</div>
+{% endblock %}

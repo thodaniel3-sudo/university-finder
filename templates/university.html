@@ -97,7 +97,12 @@
                     <div class="card shadow-sm border-0 h-100">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h5 class="card-title mb-0">{{ prog.programme_name }}</h5>
+                                <h5 class="card-title mb-0">
+                                    <a href="{{ url_for('programmes.detail_view', programme_id=prog.id) }}"
+                                       class="text-decoration-none">
+                                        {{ prog.programme_name }}
+                                    </a>
+                                </h5>
                                 {% if match %}
                                     {% set overall = match.overall_status %}
                                     <span class="badge bg-{{ match.requirements[0].color if match.requirements else 'secondary' }}"
@@ -194,14 +199,22 @@
                                 </p>
                             {% endif %}
 
-                            {% if prog.programme_url %}
-                                <a href="{{ prog.programme_url }}" target="_blank"
-                                   rel="noopener noreferrer"
-                                   class="btn btn-sm btn-outline-primary mt-3">
-                                    Programme page
-                                    <i class="bi bi-box-arrow-up-right ms-1"></i>
+                            <!-- ===== Action buttons ===== -->
+                            <div class="d-flex flex-wrap gap-2 mt-3">
+                                <a href="{{ url_for('programmes.detail_view', programme_id=prog.id) }}"
+                                   class="btn btn-sm btn-primary">
+                                    View programme
+                                    <i class="bi bi-arrow-right ms-1"></i>
                                 </a>
-                            {% endif %}
+                                {% if prog.programme_url %}
+                                    <a href="{{ prog.programme_url }}" target="_blank"
+                                       rel="noopener noreferrer"
+                                       class="btn btn-sm btn-outline-primary">
+                                        Programme page
+                                        <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>

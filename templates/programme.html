@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+
+{% block title %}{{ programme.programme_name }} — {{ university.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <!-- ===== Breadcrumb ===== -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('universities.list_view') }}">Universities</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('universities.detail_view', university_id=university.id) }}">
+                    {{ university.name }}
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                {{ programme.programme_name }}
+            </li>
+        </ol>
+    </nav>
+
+    <!-- ===== Header card ===== -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                <div>
+                    <h1 class="fw-bold mb-2">{{ programme.programme_name }}</h1>
+                    <p class="text-muted mb-2">
+                        <i class="bi bi-building me-1"></i>
+                        <a href="{{ url_for('universities.detail_view', university_id=university.id) }}"
+                           class="text-decoration-none">
+                            {{ university.name }}
+                        </a>
+                        {% if university.city or university.country %}
+                            · {{ university.city }}{% if university.city and university.country %}, {% endif %}{{ university.country }}
+                        {% endif %}
+                    </p>
+                    <p class="mb-0">
+                        <span class="badge bg-primary">{{ programme.degree_level }}</span>
+                        {% if programme.field %}
+                            <span class="badge bg-info text-dark">{{ programme.field }}</span>
+                        {% endif %}
+                        {% if programme.specialization %}
+                            <span class="badge bg-secondary">{{ programme.specialization }}</span>
+                        {% endif %}
+                        {% if programme.study_mode %}
+                            <span class="badge bg-secondary">{{ programme.study_mode }}</span>
+                        {% endif %}
+                    </p>
+                </div>
+
+                {% if current_user %}
+                    <form method="post"
+                          action="{{ url_for('programmes.' + ('unsave_view' if saved else 'save_view'), programme_id=programme.id) }}">
+                        {# CSRF token via Flask-WTF's context helper #}
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {% if saved %}
+                            <button type="submit" class="btn btn-outline-danger">
+                                <i class="bi bi-bookmark-x me-2"></i>Remove from saved
+                            </button>
+                        {% else %}
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-bookmark-plus me-2"></i>Save programme
+                            </button>
+                        {% endif %}
+                    </form>
+                {% else %}
+                    <a href="{{ url_for('auth.login') }}?next={{ request.path }}"
+                       class="btn btn-outline-primary">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>Log in to save
+                    </a>
+                {% endif %}
+            </div>
+
+            <hr class="my-4">
+
+            <!-- Programme facts -->
+            <div class="row g-3 small">
+                {% if programme.duration %}
+                    <div class="col-md-3">
+                        <div class="text-muted">Duration</div>
+                        <div class="fw-semibold">{{ programme.duration }}</div>
+                    </div>
+                {% endif %}
+                {% if programme.language %}
+                    <div class="col-md-3">
+                        <div class="text-muted">Language</div>
+                        <div class="fw-semibold">{{ programme.language }}</div>
+                    </div>
+                {% endif %}
+                {% if programme.study_mode %}
+                    <div class="col-md-3">
+                        <div class="text-muted">Study mode</div>
+                        <div class="fw-semibold">{{ programme.study_mode }}</div>
+                    </div>
+                {% endif %}
+                {% if programme.field %}
+                    <div class="col-md-3">
+                        <div class="text-muted">Field</div>
+                        <div class="fw-semibold">{{ programme.field }}</div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="mt-4 d-flex flex-wrap gap-2">
+                {% if programme.programme_url %}
+                    <a href="{{ programme.programme_url }}" target="_blank"
+                       rel="noopener noreferrer" class="btn btn-primary">
+                        <i class="bi bi-box-arrow-up-right me-1"></i>Programme webpage
+                    </a>
+                {% endif %}
+                {% if programme.application_url %}
+                    <a href="{{ programme.application_url }}" target="_blank"
+                       rel="noopener noreferrer" class="btn btn-success">
+                        <i class="bi bi-send me-1"></i>Apply here
+                    </a>
+                {% endif %}
+                {% if university.website_url %}
+                    <a href="{{ university.website_url }}" target="_blank"
+                       rel="noopener noreferrer" class="btn btn-outline-secondary">
+                        <i class="bi bi-globe me-1"></i>University website
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Logged-out prompt ===== -->
+    {% if not current_user %}
+        <div class="alert alert-info d-flex align-items-start">
+            <i class="bi bi-info-circle-fill me-2 mt-1"></i>
+            <div>
+                <strong>Want to see how you match?</strong>
+                <div class="small mt-1">
+                    <a href="{{ url_for('auth.login') }}?next={{ request.path }}">Log in</a>
+                    or <a href="{{ url_for('auth.register') }}">create an account</a>
+                    and complete your profile to see a transparent comparison
+                    against this programme's documented requirements.
+                </div>
+            </div>
+        </div>
+    {% elif not match %}
+        <div class="alert alert-info d-flex align-items-start">
+            <i class="bi bi-info-circle-fill me-2 mt-1"></i>
+            <div>
+                <strong>Complete your profile to see your match.</strong>
+                <div class="small mt-1">
+                    <a href="{{ url_for('profile.view_profile') }}">Go to your profile</a>
+                    and fill in your academic details.
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- ===== Requirements column ===== -->
+        <div class="{% if match %}col-lg-5{% else %}col-lg-6{% endif %}">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-earmark-text me-2"></i>
+                        Documented requirements
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if requirements %}
+                        <dl class="row small mb-0">
+                            {% if requirements.minimum_cgpa is not none and requirements.minimum_cgpa_scale is not none %}
+                                <dt class="col-sm-6 text-muted">Minimum CGPA</dt>
+                                <dd class="col-sm-6">
+                                    {{ requirements.minimum_cgpa }}/{{ requirements.minimum_cgpa_scale }}
+                                </dd>
+                            {% else %}
+                                <dt class="col-sm-6 text-muted">Minimum CGPA</dt>
+                                <dd class="col-sm-6 text-muted fst-italic">
+                                    Unknown — verify with university
+                                </dd>
+                            {% endif %}
+
+                            {% if requirements.minimum_degree %}
+                                <dt class="col-sm-6 text-muted">Minimum degree</dt>
+                                <dd class="col-sm-6">{{ requirements.minimum_degree }}</dd>
+                            {% endif %}
+
+                            {% if requirements.required_field %}
+                                <dt class="col-sm-6 text-muted">Required field</dt>
+                                <dd class="col-sm-6">{{ requirements.required_field }}</dd>
+                            {% endif %}
+
+                            {% if requirements.english_requirement %}
+                                <dt class="col-sm-6 text-muted">English requirement</dt>
+                                <dd class="col-sm-6">{{ requirements.english_requirement }}</dd>
+                            {% endif %}
+
+                            <dt class="col-sm-6 text-muted">IELTS</dt>
+                            <dd class="col-sm-6">
+                                {% if requirements.ielts_required %}
+                                    Required{% if requirements.ielts_minimum_score %} — minimum {{ requirements.ielts_minimum_score }}{% endif %}
+                                {% elif requirements.ielts_required is not none %}
+                                    Not required
+                                {% else %}
+                                    <span class="text-muted fst-italic">Unknown</span>
+                                {% endif %}
+                            </dd>
+
+                            <dt class="col-sm-6 text-muted">TOEFL</dt>
+                            <dd class="col-sm-6">
+                                {% if requirements.toefl_required %}
+                                    Required{% if requirements.toefl_minimum_score %} — minimum {{ requirements.toefl_minimum_score }}{% endif %}
+                                {% elif requirements.toefl_required is not none %}
+                                    Not required
+                                {% else %}
+                                    <span class="text-muted fst-italic">Unknown</span>
+                                {% endif %}
+                            </dd>
+
+                            <dt class="col-sm-6 text-muted">GRE</dt>
+                            <dd class="col-sm-6">
+                                {% if requirements.gre_required %}
+                                    Required
+                                {% elif requirements.gre_required is not none %}
+                                    Not required
+                                {% else %}
+                                    <span class="text-muted fst-italic">Unknown</span>
+                                {% endif %}
+                            </dd>
+
+                            {% if requirements.work_experience_required %}
+                                <dt class="col-sm-6 text-muted">Work experience</dt>
+                                <dd class="col-sm-6">{{ requirements.work_experience_required }}</dd>
+                            {% endif %}
+
+                            {% if requirements.other_requirements %}
+                                <dt class="col-sm-6 text-muted">Other requirements</dt>
+                                <dd class="col-sm-6">{{ requirements.other_requirements }}</dd>
+                            {% endif %}
+                        </dl>
+
+                        <hr class="my-3">
+
+                        <p class="small text-muted mb-0">
+                            <i class="bi bi-shield-exclamation me-1"></i>
+                            Verification status:
+                            <span class="badge
+                                {% if requirements.verification_status == 'verified' %}bg-success
+                                {% elif requirements.verification_status == 'unverified' %}bg-secondary
+                                {% elif requirements.verification_status == 'outdated' %}bg-warning text-dark
+                                {% else %}bg-info text-dark{% endif %}">
+                                {{ requirements.verification_status }}
+                            </span>
+                            {% if requirements.last_verified_at %}
+                                · Last verified {{ requirements.last_verified_at }}
+                            {% endif %}
+                            {% if requirements.source_url %}
+                                · <a href="{{ requirements.source_url }}"
+                                     target="_blank" rel="noopener noreferrer">Source</a>
+                            {% endif %}
+                        </p>
+                    {% else %}
+                        <p class="text-muted mb-0">
+                            <i class="bi bi-exclamation-circle me-1"></i>
+                            No admission requirements are recorded for this programme yet.
+                            Check the university's website directly.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Match column ===== -->
+        {% if match %}
+            <div class="col-lg-7">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-clipboard-check me-2"></i>
+                            Your match
+                        </h5>
+                        <span class="badge bg-secondary">
+                            {{ match.meets_count }}/{{ match.total_count }} requirements met
+                        </span>
+                    </div>
+                    <div class="card-body">
+
+                        {# --- Requirements you meet --- #}
+                        {% if grouped[status_labels|attr('__class__') and 'MEETS'] %}
+                        {% endif %}
+                        {% if grouped.MEETS %}
+                            <h6 class="fw-bold text-success mb-2">
+                                <i class="bi bi-check-circle-fill me-1"></i>
+                                Meets ({{ grouped.MEETS|length }})
+                            </h6>
+                            <ul class="list-unstyled small mb-4">
+                                {% for r in grouped.MEETS %}
+                                    <li class="mb-2 ps-3 border-start border-3 border-success">
+                                        <strong>{{ r.name }}:</strong> {{ r.reason }}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+
+                        {# --- Requirements you don't meet --- #}
+                        {% if grouped.DOES_NOT_MEET %}
+                            <h6 class="fw-bold text-danger mb-2">
+                                <i class="bi bi-x-circle-fill me-1"></i>
+                                Does not appear to meet ({{ grouped.DOES_NOT_MEET|length }})
+                            </h6>
+                            <ul class="list-unstyled small mb-4">
+                                {% for r in grouped.DOES_NOT_MEET %}
+                                    <li class="mb-2 ps-3 border-start border-3 border-danger">
+                                        <strong>{{ r.name }}:</strong> {{ r.reason }}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+
+                        {# --- Unknown --- #}
+                        {% if grouped.UNKNOWN %}
+                            <h6 class="fw-bold text-secondary mb-2">
+                                <i class="bi bi-question-circle-fill me-1"></i>
+                                Unknown / insufficient data ({{ grouped.UNKNOWN|length }})
+                            </h6>
+                            <ul class="list-unstyled small mb-4">
+                                {% for r in grouped.UNKNOWN %}
+                                    <li class="mb-2 ps-3 border-start border-3 border-secondary">
+                                        <strong>{{ r.name }}:</strong> {{ r.reason }}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+
+                        {# --- Requires verification --- #}
+                        {% if grouped.REQUIRES_VERIFICATION %}
+                            <h6 class="fw-bold text-warning mb-2">
+                                <i class="bi bi-shield-exclamation me-1"></i>
+                                Requires verification ({{ grouped.REQUIRES_VERIFICATION|length }})
+                            </h6>
+                            <ul class="list-unstyled small mb-0">
+                                {% for r in grouped.REQUIRES_VERIFICATION %}
+                                    <li class="mb-2 ps-3 border-start border-3 border-warning">
+                                        <strong>{{ r.name }}:</strong> {{ r.reason }}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+
+                        <hr class="my-4">
+
+                        {% set overall = match.overall_status %}
+                        <div class="alert alert-{{ match.requirements[0].color if match.requirements else 'secondary' }} mb-0">
+                            <strong>Overall:</strong> {{ status_labels[overall] }}.
+                            <div class="small mt-1">
+                                This is an assessment against <em>documented</em>
+                                requirements only. Final admission decisions are
+                                always made by the university.
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
