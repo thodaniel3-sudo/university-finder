@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}{{ external.title }} — University Finder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <a href="{{ url_for('saved.list_view') }}"
+       class="btn btn-sm btn-outline-secondary mb-3">
+        <i class="bi bi-arrow-left me-2"></i>Back to saved
+    </a>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle-fill me-1"></i>
+        This programme was found via web search — we haven't verified it.
+        Visit the university's page to confirm details.
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                <div>
+                    <h1 class="fw-bold mb-2">{{ external.title }}</h1>
+                    <p class="text-muted small mb-1">
+                        <i class="bi bi-globe me-1"></i>
+                        <a href="{{ external.url }}" target="_blank" rel="noopener noreferrer">
+                            {{ external.source_domain or external.url }}
+                        </a>
+                    </p>
+                    {% if external.description %}
+                        <p class="small mb-2">{{ external.description }}</p>
+                    {% endif %}
+                    {% if external.search_query %}
+                        <p class="text-muted small mb-0">
+                            Found while searching for "<em>{{ external.search_query }}</em>"
+                        </p>
+                    {% endif %}
+                </div>
+                <span class="badge bg-{{ status_colors[external.status] }} fs-6">
+                    {{ status_labels[external.status] }}
+                </span>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{{ url_for('external.compose_view', external_id=external.id) }}"
+                   class="btn btn-primary">
+                    <i class="bi bi-envelope me-1"></i>Compose inquiry email
+                </a>
+                <a href="{{ external.url }}" target="_blank" rel="noopener noreferrer"
+                   class="btn btn-outline-primary">
+                    Visit page <i class="bi bi-box-arrow-up-right ms-1"></i>
+                </a>
+                <form method="post" action="{{ url_for('external.delete_view', external_id=external.id) }}"
+                      onsubmit="return confirm('Remove this saved programme?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-outline-danger">
+                        <i class="bi bi-trash me-1"></i>Remove
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">Track this</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {{ form.hidden_tag() }}
+
+                <div class="mb-3">
+                    {{ form.status.label(class="form-label") }}
+                    {{ form.status(class="form-select") }}
+                </div>
+
+                <div class="mb-3">
+                    {{ form.notes.label(class="form-label") }}
+                    {{ form.notes(class="form-control", rows="5") }}
+                </div>
+
+                {{ form.submit(class="btn btn-primary") }}
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -423,3 +423,21 @@ class AdminRequirementsForm(FlaskForm):
         validators=[DataRequired()],
     )
     submit = SubmitField("Save requirements")
+
+    # ============================================================
+# External programme edit form
+# ============================================================
+
+class ExternalProgrammeForm(FlaskForm):
+    """Edit notes/status of a saved web-discovered programme."""
+
+    status = SelectField(
+        "Status",
+        choices=APPLICATION_STATUSES_CHOICES,
+        validators=[DataRequired()],
+    )
+    notes = TextAreaField(
+        "Notes (optional)",
+        validators=[Optional(), Length(max=5000)],
+    )
+    submit = SubmitField("Save changes")

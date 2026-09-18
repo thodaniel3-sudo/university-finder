@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Saved programmes — University Finder{% endblock %}
+{% block title %}Saved — University Finder{% endblock %}
 
 {% block content %}
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
-            <h1 class="fw-bold mb-0">Saved programmes</h1>
+            <h1 class="fw-bold mb-0">Saved</h1>
             <p class="text-muted mb-0">
-                {{ saved_items|length }}
-                programme{{ "" if saved_items|length == 1 else "s" }} saved.
+                {{ db_items|length }} from our database ·
+                {{ external_items|length }} from the web
             </p>
         </div>
         <a href="{{ url_for('universities.list_view') }}" class="btn btn-outline-secondary">
@@ -17,9 +17,15 @@
         </a>
     </div>
 
-    {% if saved_items %}
-        <div class="row g-4">
-            {% for item in saved_items %}
+    <!-- ===== From our database ===== -->
+    <h4 class="fw-bold mb-3">
+        <i class="bi bi-database me-2 text-success"></i>From our database
+        <span class="text-muted fs-6">({{ db_items|length }})</span>
+    </h4>
+
+    {% if db_items %}
+        <div class="row g-4 mb-5">
+            {% for item in db_items %}
                 {% set prog = item.programme %}
                 {% set uni = item.university %}
                 {% set match = item.match %}
@@ -76,13 +82,19 @@
                                 </div>
                             {% endif %}
 
-                            <div class="d-flex gap-2 mt-3">
+                            <div class="d-flex gap-2 mt-3 flex-wrap">
                                 <a href="{{ url_for('programmes.detail_view', programme_id=prog.id) }}"
                                    class="btn btn-sm btn-primary">
                                     View programme
                                     <i class="bi bi-arrow-right ms-1"></i>
                                 </a>
-                                
+                                <form method="post"
+                                      action="{{ url_for('applications.start_view', programme_id=prog.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-success">
+                                        <i class="bi bi-clipboard-check me-1"></i>Start application
+                                    </button>
+                                </form>
                                 <form method="post"
                                       action="{{ url_for('programmes.unsave_view', programme_id=prog.id) }}">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -100,31 +112,70 @@
                             {% endif %}
                         </div>
                     </div>
-<form method="post"
-      action="{{ url_for('applications.start_view', programme_id=prog.id) }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button type="submit" class="btn btn-sm btn-success">
-        <i class="bi bi-clipboard-check me-1"></i>Start application
-    </button>
-</form>
-
                 </div>
             {% endfor %}
         </div>
     {% else %}
-        <div class="card shadow-sm border-0">
-            <div class="card-body text-center py-5">
-                <i class="bi bi-bookmark" style="font-size: 3rem; color: #adb5bd;"></i>
-                <h4 class="fw-bold mt-3">No saved programmes yet</h4>
-                <p class="text-muted">
-                    Save programmes while browsing, and they'll show up here
-                    so you can compare them later.
-                </p>
-                <a href="{{ url_for('universities.list_view') }}"
-                   class="btn btn-primary mt-2">
-                    <i class="bi bi-search me-2"></i>Browse universities
-                </a>
-            </div>
+        <div class="alert alert-secondary mb-5">
+            <i class="bi bi-info-circle me-1"></i>
+            You haven't saved any programmes from our database yet.
+            <a href="{{ url_for('universities.list_view') }}">Browse universities</a>.
+        </div>
+    {% endif %}
+
+    <!-- ===== From the web ===== -->
+    <h4 class="fw-bold mb-3">
+        <i class="bi bi-globe me-2 text-primary"></i>From the web
+        <span class="text-muted fs-6">({{ external_items|length }})</span>
+    </h4>
+
+    {% if external_items %}
+        <div class="row g-4">
+            {% for ext in external_items %}
+                <div class="col-lg-6">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body">
+                            <h5 class="card-title mb-1">
+                                <a href="{{ url_for('external.detail_view', external_id=ext.id) }}"
+                                   class="text-decoration-none">
+                                    {{ ext.title }}
+                                </a>
+                            </h5>
+                            <p class="text-muted small mb-2">
+                                <i class="bi bi-globe me-1"></i>{{ ext.source_domain or "—" }}
+                            </p>
+                            {% if ext.description %}
+                                <p class="small text-muted mb-3">
+                                    {{ ext.description[:150] }}{% if ext.description|length > 150 %}...{% endif %}
+                                </p>
+                            {% endif %}
+                            <div class="d-flex gap-2 flex-wrap">
+                                <a href="{{ url_for('external.detail_view', external_id=ext.id) }}"
+                                   class="btn btn-sm btn-primary">View</a>
+                                <a href="{{ url_for('external.compose_view', external_id=ext.id) }}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-envelope me-1"></i>Contact
+                                </a>
+                                <form method="post"
+                                      action="{{ url_for('external.delete_view', external_id=ext.id) }}"
+                                      onsubmit="return confirm('Remove this saved programme?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-secondary">
+            <i class="bi bi-info-circle me-1"></i>
+            No web-saved programmes. Search any field at
+            <a href="{{ url_for('search.search_view') }}">Search</a>
+            and save results you like.
         </div>
     {% endif %}
 </div>

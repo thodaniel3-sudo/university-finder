@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Compose inquiry — {{ external.title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <a href="{{ url_for('external.detail_view', external_id=external.id) }}"
+       class="btn btn-sm btn-outline-secondary mb-3">
+        <i class="bi bi-arrow-left me-2"></i>Back
+    </a>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="alert alert-warning small">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                We don't have the university's contact email for this result.
+                Visit <a href="{{ external.url }}" target="_blank" rel="noopener noreferrer">
+                    {{ external.source_domain or 'their page' }}
+                </a> to find their admissions address, then paste it below.
+            </div>
+
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <h1 class="fw-bold mb-3">Compose inquiry</h1>
+                    <p class="text-muted small mb-4">
+                        We've drafted a message. Edit anything you like, then
+                        click Submit to review and send.
+                    </p>
+
+                    <form method="post" novalidate>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label class="form-label">To (paste the university's email)</label>
+                            <input type="email" name="recipient_email" class="form-control"
+                                   placeholder="admissions@university.edu" required>
+                            <div class="form-text">
+                                Look for "Contact" or "Admissions" on the university's site.
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Subject</label>
+                            <input type="text" name="subject" class="form-control"
+                                   value="{{ draft.subject }}" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Message</label>
+                            <textarea name="body" class="form-control" rows="16" required
+                                      style="font-family: ui-monospace, monospace; font-size: 0.9rem;">{{ draft.body }}</textarea>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send me-1"></i>Continue to review
+                            </button>
+                            <a href="{{ url_for('external.detail_view', external_id=external.id) }}"
+                               class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

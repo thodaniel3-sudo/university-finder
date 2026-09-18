@@ -25,10 +25,12 @@ class Config:
     SECRET_KEY = _env("FLASK_SECRET_KEY", "dev-only-change-me")
     FLASK_ENV = _env("FLASK_ENV", "development")
 
-    # Session cookie hardening
+       # Session cookie hardening
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
-    SESSION_COOKIE_SECURE = False
+    # In production (HTTPS), cookies must be Secure=True.
+    # We read from env so local HTTP dev still works.
+    SESSION_COOKIE_SECURE = _env("SESSION_COOKIE_SECURE", "false").lower() == "true"
     PERMANENT_SESSION_LIFETIME = 60 * 60 * 24 * 7  # 7 days
 
     # Supabase

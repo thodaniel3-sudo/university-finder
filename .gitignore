@@ -27,3 +27,13 @@ htmlcov/
 *.sqlite3
 *.db
 *.log
+# Never commit local env
+.env
+.env.local
+.env.production
+
+# Backups and temp files
+*.bak
+*.tmp
+brave_response.json
+check_*.py

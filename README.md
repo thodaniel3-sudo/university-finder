@@ -61,3 +61,24 @@ Then open http://127.0.0.1:5000
 
 Building incrementally. Phase 5 (Frontend foundation) is complete.
 Phase 6 (Supabase project and database) is next.
+
+## Deployment on Render
+
+This app is deployed on Render as a single Python web service.
+
+### Build command
+    pip install -r requirements.txt
+
+### Start command
+    gunicorn app:app
+
+### Environment variables to set in Render dashboard
+- `FLASK_SECRET_KEY` — long random string
+- `FLASK_ENV` — `production`
+- `SESSION_COOKIE_SECURE` — `true`
+- `SUPABASE_URL` — from Supabase project settings
+- `SUPABASE_ANON_KEY` — from Supabase project settings
+- `SUPABASE_SERVICE_ROLE_KEY` — from Supabase project settings
+- `BRAVE_SEARCH_API_KEY` — from Brave Search dashboard (optional)
+
+Never commit real values. Set them in Render's Environment tab.

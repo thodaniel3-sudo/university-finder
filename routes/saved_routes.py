@@ -1,14 +1,14 @@
 """
 Saved programmes list page.
 
-Reading the list uses the user client (RLS enforces ownership).
-Unsaving reuses the /programmes/<id>/unsave route from Phase 11 —
-no duplicate logic here.
+Reads the user's DB-saved programmes and their web-saved external
+programmes, and renders them in two sections on /saved.
 """
 
 from flask import Blueprint, render_template
 
 from services.auth_decorators import current_user, login_required
+from services.external_service import list_external
 from services.matching_service import STATUS_COLORS, STATUS_LABELS, match_programme
 from services.profile_service import get_profile
 from services.saved_service import list_saved_programmes
@@ -41,12 +41,13 @@ def list_view():
     rows = list_saved_programmes(user["id"], user["access_token"]) or []
 
     # Load profile once — used for optional match computations.
+    profile = None
     try:
         profile = get_profile(user["id"], user["access_token"])
     except Exception:
         profile = None
 
-    saved_items = []
+    db_items = []
     for row in rows:
         prog = row.get("programmes") or {}
         if isinstance(prog, list):
@@ -61,7 +62,7 @@ def list_view():
         if profile:
             match = match_programme(profile, prog, req)
 
-        saved_items.append({
+        db_items.append({
             "saved_at": row.get("created_at"),
             "programme": prog,
             "university": uni,
@@ -69,9 +70,16 @@ def list_view():
             "match": match,
         })
 
+    # Fetch external (web-saved) programmes.
+    try:
+        external_items = list_external(user["id"], user["access_token"])
+    except Exception:
+        external_items = []
+
     return render_template(
         "saved.html",
-        saved_items=saved_items,
+        db_items=db_items,
+        external_items=external_items,
         status_labels=STATUS_LABELS,
         status_colors=STATUS_COLORS,
     )

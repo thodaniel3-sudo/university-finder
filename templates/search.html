@@ -83,7 +83,6 @@
             </div>
         {% endif %}
 
-        <!-- ===== "Nothing in DB" message ===== -->
         {% if results.db_count == 0 %}
             <div class="alert alert-secondary">
                 <i class="bi bi-info-circle me-1"></i>
@@ -93,7 +92,6 @@
 
         <!-- ===== Web section ===== -->
         {% if results.web_results %}
-            {# Case 1: we have web results — show them #}
             <h4 class="fw-bold mb-3 mt-5">
                 <i class="bi bi-globe me-2 text-primary"></i>
                 From the web
@@ -107,30 +105,52 @@
                 details, deadlines, and requirements.
             </div>
 
-            <div class="list-group mb-4">
+            <div class="row g-3 mb-4">
                 {% for r in results.web_results %}
-                    <a href="{{ r.url }}" target="_blank" rel="noopener noreferrer"
-                       class="list-group-item list-group-item-action">
-                        <div class="d-flex justify-content-between align-items-start gap-2">
-                            <div>
-                                <div class="fw-semibold">{{ r.title }}</div>
-                                <div class="small text-muted mb-1">{{ r.source }}</div>
-                                <div class="small">{{ r.description }}</div>
+                    <div class="col-lg-6">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-body d-flex flex-column">
+                                <h6 class="fw-bold mb-1">{{ r.title }}</h6>
+                                <p class="small text-muted mb-2">
+                                    <i class="bi bi-globe me-1"></i>{{ r.source }}
+                                </p>
+                                <p class="small mb-3 flex-grow-1">{{ r.description }}</p>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a href="{{ r.url }}" target="_blank" rel="noopener noreferrer"
+                                       class="btn btn-sm btn-outline-primary">
+                                        Visit page <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                    </a>
+                                    {% if current_user %}
+                                        <form method="post" action="{{ url_for('external.save_view') }}" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="title" value="{{ r.title }}">
+                                            <input type="hidden" name="url" value="{{ r.url }}">
+                                            <input type="hidden" name="source_domain" value="{{ r.source }}">
+                                            <input type="hidden" name="description" value="{{ r.description }}">
+                                            <input type="hidden" name="search_query" value="{{ query }}">
+                                            <button type="submit" class="btn btn-sm btn-primary">
+                                                <i class="bi bi-bookmark-plus me-1"></i>Save
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <a href="{{ url_for('auth.login') }}?next={{ request.full_path|urlencode }}"
+                                           class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-bookmark-plus me-1"></i>Log in to save
+                                        </a>
+                                    {% endif %}
+                                </div>
                             </div>
-                            <i class="bi bi-box-arrow-up-right text-muted"></i>
                         </div>
-                    </a>
+                    </div>
                 {% endfor %}
             </div>
         {% elif results.web_available %}
-            {# Case 2: web available but zero results — announce #}
             <div class="alert alert-info mt-4">
                 <i class="bi bi-info-circle-fill me-1"></i>
                 <strong>No web results found for that exact query.</strong>
                 Try broader keywords, or use the form below to request a programme.
             </div>
         {% else %}
-            {# Case 3: no key configured — the blue box you've been missing #}
             <div class="alert alert-info mt-4">
                 <i class="bi bi-info-circle-fill me-1"></i>
                 <strong>Web search is not configured.</strong>
@@ -140,7 +160,7 @@
             </div>
         {% endif %}
 
-        <!-- ===== Request a programme — always shown when query is present ===== -->
+        <!-- ===== Request a programme ===== -->
         <div class="card shadow-sm border-0 mt-4">
             <div class="card-body">
                 <h5 class="fw-bold mb-3">
