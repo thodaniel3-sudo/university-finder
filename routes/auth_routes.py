@@ -15,6 +15,7 @@ from flask import (
 from services.auth_decorators import current_user, login_required
 from services.auth_service import AuthError, authenticate_user, register_user
 from services.forms import LoginForm, RegisterForm
+from services.profile_service import get_profile, profile_completion
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -92,4 +93,11 @@ def logout():
 @auth_bp.route("/dashboard")
 @login_required
 def dashboard():
-    return render_template("dashboard.html", user=current_user())
+    user = current_user()
+    profile = get_profile(user["id"], user["access_token"])
+    completion = profile_completion(profile)
+    return render_template(
+        "dashboard.html",
+        user=user,
+        completion=completion,
+    )

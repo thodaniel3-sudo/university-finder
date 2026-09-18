@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Profile — University Finder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <h1 class="fw-bold mb-0">Your profile</h1>
+        <a href="{{ url_for('auth.dashboard') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Back to dashboard
+        </a>
+    </div>
+
+    {% if completion.percent < 100 %}
+        <div class="alert alert-info d-flex align-items-start" role="alert">
+            <i class="bi bi-info-circle-fill me-2 mt-1"></i>
+            <div>
+                <strong>Profile {{ completion.percent }}% complete.</strong>
+                {% if completion.missing %}
+                    <div class="small mt-1">
+                        Required for matching:
+                        {{ completion.missing | join(", ") }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-success d-flex align-items-center" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <div>Profile complete. You're ready for programme matching.</div>
+        </div>
+    {% endif %}
+
+    <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+
+        <!-- Identity -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-person-vcard me-2"></i>Identity</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        {{ form.full_name.label(class="form-label") }}
+                        {{ form.full_name(class="form-control" + (" is-invalid" if form.full_name.errors else "")) }}
+                        {% for e in form.full_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.country.label(class="form-label") }}
+                        {{ form.country(class="form-select" + (" is-invalid" if form.country.errors else "")) }}
+                        {% for e in form.country.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Study intention -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-mortarboard me-2"></i>Study intention</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        {{ form.degree_level.label(class="form-label") }}
+                        {{ form.degree_level(class="form-select" + (" is-invalid" if form.degree_level.errors else "")) }}
+                        {% for e in form.degree_level.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.desired_programme.label(class="form-label") }}
+                        {{ form.desired_programme(class="form-control" + (" is-invalid" if form.desired_programme.errors else "")) }}
+                        {% for e in form.desired_programme.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.desired_field.label(class="form-label") }}
+                        {{ form.desired_field(class="form-control" + (" is-invalid" if form.desired_field.errors else "")) }}
+                        {% for e in form.desired_field.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Previous education -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-book me-2"></i>Previous education</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        {{ form.previous_degree.label(class="form-label") }}
+                        {{ form.previous_degree(class="form-control" + (" is-invalid" if form.previous_degree.errors else "")) }}
+                        {% for e in form.previous_degree.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.previous_field.label(class="form-label") }}
+                        {{ form.previous_field(class="form-control" + (" is-invalid" if form.previous_field.errors else "")) }}
+                        {% for e in form.previous_field.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.cgpa.label(class="form-label") }}
+                        {{ form.cgpa(class="form-control" + (" is-invalid" if form.cgpa.errors else ""), step="0.01") }}
+                        {% for e in form.cgpa.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.cgpa_scale.label(class="form-label") }}
+                        {{ form.cgpa_scale(class="form-control" + (" is-invalid" if form.cgpa_scale.errors else ""), step="0.01") }}
+                        {% for e in form.cgpa_scale.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.graduation_year.label(class="form-label") }}
+                        {{ form.graduation_year(class="form-control" + (" is-invalid" if form.graduation_year.errors else "")) }}
+                        {% for e in form.graduation_year.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- English -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-translate me-2"></i>English proficiency</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        {{ form.english_proficiency.label(class="form-label") }}
+                        {{ form.english_proficiency(class="form-select" + (" is-invalid" if form.english_proficiency.errors else "")) }}
+                        {% for e in form.english_proficiency.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.ielts_score.label(class="form-label") }}
+                        {{ form.ielts_score(class="form-control" + (" is-invalid" if form.ielts_score.errors else ""), step="0.1") }}
+                        {% for e in form.ielts_score.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.toefl_score.label(class="form-label") }}
+                        {{ form.toefl_score(class="form-control" + (" is-invalid" if form.toefl_score.errors else "")) }}
+                        {% for e in form.toefl_score.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Other -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-three-dots me-2"></i>Other information</h5>
+            </div>
+            <div class="card-body">
+                {{ form.other_info.label(class="form-label") }}
+                {{ form.other_info(class="form-control" + (" is-invalid" if form.other_info.errors else ""), rows="4") }}
+                {% for e in form.other_info.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mb-5">
+            {{ form.submit(class="btn btn-primary btn-lg") }}
+            <a href="{{ url_for('auth.dashboard') }}" class="btn btn-outline-secondary btn-lg">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

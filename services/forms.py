@@ -5,9 +5,69 @@ is rendered inside a template using {{ form.hidden_tag() }}.
 """
 
 from flask_wtf import FlaskForm
-from wtforms import BooleanField, PasswordField, StringField, SubmitField
-from wtforms.validators import DataRequired, Email, EqualTo, Length
+from wtforms import (
+    BooleanField,
+    DecimalField,
+    IntegerField,
+    PasswordField,
+    SelectField,
+    StringField,
+    SubmitField,
+    TextAreaField,
+)
+from wtforms.validators import (
+    DataRequired,
+    Email,
+    EqualTo,
+    Length,
+    NumberRange,
+    Optional,
+)
 
+
+# ============================================================
+# Choice constants for SelectField dropdowns
+# ============================================================
+
+DEGREE_LEVELS = [
+    ("", "-- select --"),
+    ("Bachelor", "Bachelor's degree"),
+    ("Master", "Master's degree"),
+    ("PhD", "Doctorate (PhD)"),
+    ("Diploma", "Diploma"),
+    ("Certificate", "Certificate"),
+]
+
+COUNTRIES = [
+    ("", "-- select --"),
+    ("Nigeria", "Nigeria"),
+    ("Ghana", "Ghana"),
+    ("Kenya", "Kenya"),
+    ("South Africa", "South Africa"),
+    ("United Kingdom", "United Kingdom"),
+    ("United States", "United States"),
+    ("Canada", "Canada"),
+    ("Germany", "Germany"),
+    ("France", "France"),
+    ("Netherlands", "Netherlands"),
+    ("Ireland", "Ireland"),
+    ("Australia", "Australia"),
+    ("Other", "Other"),
+]
+
+ENGLISH_LEVELS = [
+    ("", "-- select --"),
+    ("Native", "Native speaker"),
+    ("Fluent", "Fluent (C1/C2)"),
+    ("Advanced", "Advanced (B2)"),
+    ("Intermediate", "Intermediate (B1)"),
+    ("Basic", "Basic (A1/A2)"),
+]
+
+
+# ============================================================
+# Auth forms
+# ============================================================
 
 class RegisterForm(FlaskForm):
     email = StringField(
@@ -54,3 +114,84 @@ class LoginForm(FlaskForm):
     )
     remember_me = BooleanField("Remember me")
     submit = SubmitField("Log in")
+
+
+# ============================================================
+# Student profile form
+# ============================================================
+
+class ProfileForm(FlaskForm):
+    """Student academic profile."""
+
+    # ----- Identity -----
+    full_name = StringField(
+        "Full name",
+        validators=[DataRequired(), Length(max=120)],
+    )
+    country = SelectField(
+        "Country of origin",
+        choices=COUNTRIES,
+        validators=[DataRequired()],
+    )
+
+    # ----- Study intention -----
+    degree_level = SelectField(
+        "Degree level you are applying for",
+        choices=DEGREE_LEVELS,
+        validators=[DataRequired()],
+    )
+    desired_programme = StringField(
+        "Desired programme",
+        validators=[Optional(), Length(max=200)],
+    )
+    desired_field = StringField(
+        "Desired field",
+        validators=[Optional(), Length(max=200)],
+    )
+
+    # ----- Previous education -----
+    previous_degree = StringField(
+        "Previous degree (e.g. BSc Computer Science)",
+        validators=[DataRequired(), Length(max=200)],
+    )
+    previous_field = StringField(
+        "Previous field of study",
+        validators=[DataRequired(), Length(max=200)],
+    )
+    cgpa = DecimalField(
+        "CGPA",
+        places=2,
+        validators=[DataRequired(), NumberRange(min=0, max=10)],
+    )
+    cgpa_scale = DecimalField(
+        "CGPA scale (e.g. 4.00 or 5.00)",
+        places=2,
+        validators=[DataRequired(), NumberRange(min=1, max=10)],
+    )
+    graduation_year = IntegerField(
+        "Graduation year",
+        validators=[DataRequired(), NumberRange(min=1950, max=2100)],
+    )
+
+    # ----- English proficiency -----
+    english_proficiency = SelectField(
+        "English proficiency (self-assessed)",
+        choices=ENGLISH_LEVELS,
+        validators=[Optional()],
+    )
+    ielts_score = DecimalField(
+        "IELTS overall score (optional)",
+        places=1,
+        validators=[Optional(), NumberRange(min=0, max=9)],
+    )
+    toefl_score = IntegerField(
+        "TOEFL overall score (optional)",
+        validators=[Optional(), NumberRange(min=0, max=120)],
+    )
+
+    other_info = TextAreaField(
+        "Other academic information (optional)",
+        validators=[Optional(), Length(max=2000)],
+    )
+
+    submit = SubmitField("Save profile")

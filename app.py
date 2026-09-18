@@ -4,6 +4,7 @@ from flask import Flask, jsonify, render_template
 
 from config import Config
 from routes.auth_routes import auth_bp
+from routes.profile_routes import profile_bp
 from services.auth_decorators import current_user
 from services.supabase_service import get_public_client
 
@@ -23,7 +24,8 @@ def create_app(config_class=Config):
         }
 
     # ----- Blueprints -----
-    app.register_blueprint(auth_bp)  # routes defined at /login, /register, etc.
+    app.register_blueprint(auth_bp)      # /register, /login, /logout, /dashboard
+    app.register_blueprint(profile_bp)   # /profile
 
     # ----- Public routes -----
     @app.route("/")
