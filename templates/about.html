@@ -1,0 +1,59 @@
+﻿{% extends "base.html" %}
+
+{% block title %}About — University Finder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <h1 class="fw-bold mb-4">About University Finder</h1>
+
+            <p class="lead">
+                University Finder is an assistance platform that helps students
+                discover suitable universities and academic programmes based on
+                their academic profile and preferences.
+            </p>
+
+            <h4 class="mt-5">What we do</h4>
+            <ul>
+                <li>Let you describe your academic background once.</li>
+                <li>Search a curated database of universities and programmes.</li>
+                <li>Show, transparently, whether you appear to meet documented requirements.</li>
+                <li>Track applications, deadlines, documents, and email history in one place.</li>
+            </ul>
+
+            <h4 class="mt-4">What we do <em>not</em> do</h4>
+            <ul>
+                <li>We do not guarantee admission to any university.</li>
+                <li>We do not send emails on your behalf without your confirmation.</li>
+                <li>We do not present uncertain information as confirmed fact.</li>
+                <li>We do not sell your data or spam universities.</li>
+            </ul>
+
+            <h4 class="mt-4">How matching works</h4>
+            <p>
+                For each programme, the system compares your academic profile
+                against documented admission requirements. Every result is
+                classified into one of four states:
+            </p>
+            <ol>
+                <li><strong>Meets documented requirement</strong> — you appear to satisfy it based on what the university has published.</li>
+                <li><strong>Does not appear to meet documented requirement</strong> — based on published criteria, you likely fall short.</li>
+                <li><strong>Unknown / insufficient data</strong> — the university has not published clear criteria.</li>
+                <li><strong>Requires manual verification</strong> — the data is present but may be outdated or needs confirmation.</li>
+            </ol>
+
+            <div class="alert alert-warning mt-4" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Important:</strong> Final admission decisions are always
+                made by the universities. Always verify requirements on the
+                official university website before applying.
+            </div>
+
+            <a href="{{ url_for('index') }}" class="btn btn-primary mt-3">
+                <i class="bi bi-arrow-left me-2"></i>Back to home
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

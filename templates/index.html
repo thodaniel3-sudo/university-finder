@@ -1,13 +1,96 @@
-﻿<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>University Finder</title>
-</head>
-<body>
-    <h1>University Finder</h1>
-    <p>Flask is running. Jinja2 templates are working.</p>
-    <p>Current year: {{ 2026 }}</p>
-</body>
-</html>
+﻿{% extends "base.html" %}
+
+{% block title %}Home — University Finder{% endblock %}
+
+{% block content %}
+<section class="hero-section text-white">
+    <div class="container py-5">
+        <div class="row align-items-center">
+            <div class="col-lg-7">
+                <h1 class="display-4 fw-bold mb-3">
+                    Find the right university,<br>
+                    for the right programme,<br>
+                    at the right time.
+                </h1>
+                <p class="lead mb-4">
+                    Enter your academic profile, discover programmes that fit
+                    your qualifications, and track every application in one
+                    place — from search to submission.
+                </p>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="#" class="btn btn-light btn-lg disabled" aria-disabled="true">
+                        <i class="bi bi-search me-2"></i>Start searching (soon)
+                    </a>
+                    <a href="{{ url_for('about') }}" class="btn btn-outline-light btn-lg">
+                        Learn more
+                    </a>
+                </div>
+                <p class="text-white-50 small mt-3 mb-0">
+                    <i class="bi bi-info-circle me-1"></i>
+                    This platform does not guarantee admission. It helps you
+                    discover and prepare.
+                </p>
+            </div>
+            <div class="col-lg-5 d-none d-lg-block text-center">
+                <i class="bi bi-mortarboard-fill hero-icon"></i>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="container py-5">
+    <div class="text-center mb-5">
+        <h2 class="fw-bold">What you can do here</h2>
+        <p class="text-muted">Built for students, by students.</p>
+    </div>
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm feature-card">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-search feature-icon text-primary"></i>
+                    <h5 class="card-title mt-3">Search programmes</h5>
+                    <p class="card-text text-muted">
+                        Filter universities and programmes by country, degree
+                        level, field, language, and more.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm feature-card">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-check2-circle feature-icon text-success"></i>
+                    <h5 class="card-title mt-3">See if you match</h5>
+                    <p class="card-text text-muted">
+                        Transparent matching shows which requirements you meet,
+                        which you don't, and which need verification.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm feature-card">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-send feature-icon text-warning"></i>
+                    <h5 class="card-title mt-3">Track applications</h5>
+                    <p class="card-text text-muted">
+                        Save programmes, upload documents, draft inquiry emails,
+                        and track every application status.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="bg-light py-5">
+    <div class="container text-center">
+        <h3 class="fw-bold mb-3">Coming in the next phases</h3>
+        <p class="text-muted mb-0">
+            User accounts, university database, search, matching engine,
+            application tracking, document uploads, and a review-before-send
+            email workflow.
+        </p>
+    </div>
+</section>
+{% endblock %}

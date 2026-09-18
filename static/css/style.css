@@ -1,0 +1,69 @@
+﻿/* ============================================================
+   University Finder — custom styles
+   Loaded after Bootstrap, so we can override Bootstrap defaults.
+   ============================================================ */
+
+/* ---------- Global ---------- */
+body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+                 "Helvetica Neue", Arial, sans-serif;
+    color: #1a1a1a;
+    background-color: #ffffff;
+}
+
+main {
+    min-height: 60vh;
+}
+
+/* ---------- Hero (homepage) ---------- */
+.hero-section {
+    background: linear-gradient(135deg, #0b5ed7 0%, #0a4fb0 100%);
+    padding: 4rem 0;
+}
+
+.hero-section h1 {
+    line-height: 1.15;
+}
+
+.hero-icon {
+    font-size: 16rem;
+    opacity: 0.15;
+    display: block;
+}
+
+/* ---------- Feature cards ---------- */
+.feature-card {
+    transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.feature-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.08) !important;
+}
+
+.feature-icon {
+    font-size: 3rem;
+    display: block;
+    margin: 0 auto;
+}
+
+/* ---------- Navbar ---------- */
+.navbar-brand {
+    font-size: 1.25rem;
+    letter-spacing: -0.01em;
+}
+
+.navbar .nav-link.disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* ---------- Footer ---------- */
+footer {
+    font-size: 0.9rem;
+}
+
+/* ---------- Utility ---------- */
+.text-muted {
+    color: #6c757d !important;
+}
