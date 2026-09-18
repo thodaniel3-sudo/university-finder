@@ -5,25 +5,41 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _env(name: str, default: str = "") -> str:
+    """
+    Read an environment variable and strip surrounding whitespace.
+
+    Prevents the common bug where `.env` files have a space after `=`,
+    e.g. `KEY= BSA...` — the space would otherwise become part of the value.
+    """
+    raw = os.environ.get(name, default)
+    if raw is None:
+        return default
+    return raw.strip()
+
+
 class Config:
     """Base configuration shared by all environments."""
 
     # Flask
-    SECRET_KEY = os.environ.get("FLASK_SECRET_KEY", "dev-only-change-me")
-    FLASK_ENV = os.environ.get("FLASK_ENV", "development")
+    SECRET_KEY = _env("FLASK_SECRET_KEY", "dev-only-change-me")
+    FLASK_ENV = _env("FLASK_ENV", "development")
 
     # Session cookie hardening
-    SESSION_COOKIE_HTTPONLY = True   # JavaScript cannot read the cookie
-    SESSION_COOKIE_SAMESITE = "Lax"  # sent on top-level GETs, blocks most CSRF
-    SESSION_COOKIE_SECURE = False    # set True in production (HTTPS only)
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_SECURE = False
     PERMANENT_SESSION_LIFETIME = 60 * 60 * 24 * 7  # 7 days
 
     # Supabase
-    SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
-    SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
-    SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    SUPABASE_URL = _env("SUPABASE_URL")
+    SUPABASE_ANON_KEY = _env("SUPABASE_ANON_KEY")
+    SUPABASE_SERVICE_ROLE_KEY = _env("SUPABASE_SERVICE_ROLE_KEY")
+
+    # Web search (Brave Search API)
+    BRAVE_SEARCH_API_KEY = _env("BRAVE_SEARCH_API_KEY")
 
     # Email
-    EMAIL_PROVIDER = os.environ.get("EMAIL_PROVIDER", "resend")
-    EMAIL_API_KEY = os.environ.get("EMAIL_API_KEY", "")
-    EMAIL_FROM = os.environ.get("EMAIL_FROM", "")
+    EMAIL_PROVIDER = _env("EMAIL_PROVIDER", "resend")
+    EMAIL_API_KEY = _env("EMAIL_API_KEY")
+    EMAIL_FROM = _env("EMAIL_FROM")

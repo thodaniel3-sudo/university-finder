@@ -17,21 +17,36 @@
                     your qualifications, and track every application in one
                     place — from search to submission.
                 </p>
+
+                <!-- ===== Search form ===== -->
+                <form method="get" action="{{ url_for('search.search_view') }}" class="row g-2 mb-4">
+                    <div class="col-md-9">
+                        <input type="text" name="q" class="form-control form-control-lg"
+                               placeholder="Search any programme, field, or country — e.g. &quot;marine biology norway&quot;">
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-light btn-lg w-100">
+                            <i class="bi bi-search me-1"></i>Search
+                        </button>
+                    </div>
+                </form>
+
+                <!-- ===== Secondary buttons ===== -->
                 <div class="d-flex flex-wrap gap-2">
                     {% if current_user %}
-    <a href="{{ url_for('auth.dashboard') }}" class="btn btn-light btn-lg">
-        <i class="bi bi-speedometer2 me-2"></i>Go to dashboard
-    </a>
-{% else %}
-    <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg">
-        <i class="bi bi-person-plus me-2"></i>Create account
-    </a>
-{% endif %}
-                    </a>
-                    <a href="{{ url_for('about') }}" class="btn btn-outline-light btn-lg">
+                        <a href="{{ url_for('auth.dashboard') }}" class="btn btn-outline-light">
+                            <i class="bi bi-speedometer2 me-2"></i>Go to dashboard
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-outline-light">
+                            <i class="bi bi-person-plus me-2"></i>Create account
+                        </a>
+                    {% endif %}
+                    <a href="{{ url_for('about') }}" class="btn btn-outline-light">
                         Learn more
                     </a>
                 </div>
+
                 <p class="text-white-50 small mt-3 mb-0">
                     <i class="bi bi-info-circle me-1"></i>
                     This platform does not guarantee admission. It helps you

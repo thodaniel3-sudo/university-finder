@@ -52,6 +52,11 @@
                             Universities
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('search.search_view') }}">
+                            <i class="bi bi-search me-1"></i>Search
+                        </a>
+                    </li>
 
                     {% if current_user %}
                         {# ---- Logged-in links ---- #}

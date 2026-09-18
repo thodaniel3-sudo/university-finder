@@ -1,5 +1,5 @@
 ﻿from datetime import datetime
-
+from routes.search_routes import search_bp
 from flask import Flask, render_template
 from flask_wtf.csrf import CSRFProtect
 from routes.email_routes import email_bp
@@ -36,6 +36,7 @@ def create_app(config_class=Config):
         }
 
     # ----- Blueprints -----
+    app.register_blueprint(search_bp)        # /search
     app.register_blueprint(auth_bp)          # /register, /login, /logout, /dashboard
     app.register_blueprint(admin_bp)         # /admin
     app.register_blueprint(profile_bp)       # /profile

@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if query %}Search: {{ query }}{% else %}Search{% endif %} — University Finder
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="fw-bold mb-3">Search</h1>
+
+    <!-- ===== Search form ===== -->
+    <form method="get" action="{{ url_for('search.search_view') }}" class="mb-4">
+        <div class="input-group input-group-lg">
+            <input type="text" name="q" class="form-control"
+                   placeholder="Search by programme, field, or country — e.g. &quot;marine biology norway&quot;"
+                   value="{{ query or '' }}" autofocus>
+            <button class="btn btn-primary" type="submit">
+                <i class="bi bi-search"></i> Search
+            </button>
+        </div>
+    </form>
+
+    {% if query %}
+        <p class="text-muted mb-4">
+            Results for <strong>"{{ query }}"</strong>
+        </p>
+
+        <!-- ===== From our database ===== -->
+        <h4 class="fw-bold mb-3">
+            <i class="bi bi-database me-2 text-success"></i>
+            From our database
+            <span class="text-muted fs-6">({{ results.db_count }})</span>
+        </h4>
+
+        {% if results.db_programmes %}
+            <div class="row g-3 mb-4">
+                {% for p in results.db_programmes %}
+                    {% set uni = p.universities if p.universities is mapping else (p.universities[0] if p.universities else {}) %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 shadow-sm border-0">
+                            <div class="card-body">
+                                <h6 class="fw-bold mb-1">
+                                    <a href="{{ url_for('programmes.detail_view', programme_id=p.id) }}"
+                                       class="text-decoration-none">
+                                        {{ p.programme_name }}
+                                    </a>
+                                </h6>
+                                <p class="small text-muted mb-2">
+                                    <i class="bi bi-building me-1"></i>{{ uni.name or "—" }}
+                                    {% if uni.country %}· {{ uni.country }}{% endif %}
+                                </p>
+                                <p class="small mb-0">
+                                    <span class="badge bg-primary">{{ p.degree_level }}</span>
+                                    {% if p.field %}<span class="badge bg-info text-dark">{{ p.field }}</span>{% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% if results.db_universities %}
+            <div class="row g-3 mb-4">
+                {% for u in results.db_universities %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 shadow-sm border-0">
+                            <div class="card-body">
+                                <h6 class="fw-bold mb-1">
+                                    <a href="{{ url_for('universities.detail_view', university_id=u.id) }}"
+                                       class="text-decoration-none">
+                                        {{ u.name }}
+                                    </a>
+                                </h6>
+                                <p class="small text-muted mb-0">
+                                    <i class="bi bi-geo-alt me-1"></i>
+                                    {{ u.city }}{% if u.city and u.country %}, {% endif %}{{ u.country }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- ===== "Nothing in DB" message ===== -->
+        {% if results.db_count == 0 %}
+            <div class="alert alert-secondary">
+                <i class="bi bi-info-circle me-1"></i>
+                Nothing in our database matches that search.
+            </div>
+        {% endif %}
+
+        <!-- ===== Web section ===== -->
+        {% if results.web_results %}
+            {# Case 1: we have web results — show them #}
+            <h4 class="fw-bold mb-3 mt-5">
+                <i class="bi bi-globe me-2 text-primary"></i>
+                From the web
+                <span class="text-muted fs-6">({{ results.web_count }})</span>
+            </h4>
+
+            <div class="alert alert-warning small">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                These results come from a web search. We have <strong>not</strong>
+                verified them. Visit each university's page to confirm programme
+                details, deadlines, and requirements.
+            </div>
+
+            <div class="list-group mb-4">
+                {% for r in results.web_results %}
+                    <a href="{{ r.url }}" target="_blank" rel="noopener noreferrer"
+                       class="list-group-item list-group-item-action">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div>
+                                <div class="fw-semibold">{{ r.title }}</div>
+                                <div class="small text-muted mb-1">{{ r.source }}</div>
+                                <div class="small">{{ r.description }}</div>
+                            </div>
+                            <i class="bi bi-box-arrow-up-right text-muted"></i>
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        {% elif results.web_available %}
+            {# Case 2: web available but zero results — announce #}
+            <div class="alert alert-info mt-4">
+                <i class="bi bi-info-circle-fill me-1"></i>
+                <strong>No web results found for that exact query.</strong>
+                Try broader keywords, or use the form below to request a programme.
+            </div>
+        {% else %}
+            {# Case 3: no key configured — the blue box you've been missing #}
+            <div class="alert alert-info mt-4">
+                <i class="bi bi-info-circle-fill me-1"></i>
+                <strong>Web search is not configured.</strong>
+                Only results from our database are shown above.
+                If you know this programme exists and want us to add it,
+                use the form below.
+            </div>
+        {% endif %}
+
+        <!-- ===== Request a programme — always shown when query is present ===== -->
+        <div class="card shadow-sm border-0 mt-4">
+            <div class="card-body">
+                <h5 class="fw-bold mb-3">
+                    <i class="bi bi-send-plus me-2"></i>Can't find what you're looking for?
+                </h5>
+                <p class="text-muted small mb-3">
+                    Tell us which programme you want us to add, and we'll try
+                    to include it in a future update.
+                </p>
+                <form method="post" action="{{ url_for('search.request_programme') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="query" value="{{ query }}">
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small">Programme you're looking for</label>
+                            <input type="text" class="form-control"
+                                   value="{{ query }}" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">
+                                Your email (optional — so we can notify you)
+                            </label>
+                            <input type="email" name="contact_email" class="form-control"
+                                   placeholder="you@example.com">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small">Anything else we should know?</label>
+                            <textarea name="notes" class="form-control" rows="2"
+                                      placeholder="e.g. specific university or country preference"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send me-1"></i>Submit request
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    {% else %}
+        <div class="card shadow-sm border-0">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-search" style="font-size: 3rem; color: #adb5bd;"></i>
+                <h4 class="fw-bold mt-3">Try a search</h4>
+                <p class="text-muted mb-0">
+                    Enter a programme name, field, or country above.
+                    Examples: <em>Materials Science Germany</em>,
+                    <em>Marine Biology Norway</em>,
+                    <em>MBA Canada</em>.
+                </p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
