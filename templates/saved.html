@@ -82,6 +82,7 @@
                                     View programme
                                     <i class="bi bi-arrow-right ms-1"></i>
                                 </a>
+                                
                                 <form method="post"
                                       action="{{ url_for('programmes.unsave_view', programme_id=prog.id) }}">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -99,6 +100,14 @@
                             {% endif %}
                         </div>
                     </div>
+<form method="post"
+      action="{{ url_for('applications.start_view', programme_id=prog.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-sm btn-success">
+        <i class="bi bi-clipboard-check me-1"></i>Start application
+    </button>
+</form>
+
                 </div>
             {% endfor %}
         </div>

@@ -52,6 +52,9 @@
                     </p>
                 </div>
 
+
+
+
                 {% if current_user %}
                     <form method="post"
                           action="{{ url_for('programmes.' + ('unsave_view' if saved else 'save_view'), programme_id=programme.id) }}">
@@ -73,6 +76,19 @@
                         <i class="bi bi-box-arrow-in-right me-2"></i>Log in to save
                     </a>
                 {% endif %}
+
+
+
+{% if current_user and saved %}
+    <form method="post"
+          action="{{ url_for('applications.start_view', programme_id=programme.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-success">
+            <i class="bi bi-clipboard-check me-2"></i>Start application
+        </button>
+    </form>
+{% endif %}
+
             </div>
 
             <hr class="my-4">

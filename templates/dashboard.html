@@ -16,14 +16,17 @@
         <div>You are logged in as <strong>{{ user.email }}</strong>.</div>
     </div>
 
+    <!-- ===== Top cards: Profile / Saved / Applications ===== -->
     <div class="row g-4">
+
         <!-- Profile card -->
-        <div class="col-md-6">
+        <div class="col-lg-4 col-md-6">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
                     <h5 class="card-title">
                         <i class="bi bi-person-vcard me-2"></i>Academic profile
                     </h5>
+
                     {% if completion.percent == 0 %}
                         <p class="text-muted">You haven't created your profile yet.</p>
                         <a href="{{ url_for('profile.view_profile') }}" class="btn btn-primary">
@@ -36,7 +39,10 @@
                         <div class="progress mb-3" style="height: 8px;">
                             <div class="progress-bar bg-warning"
                                  role="progressbar"
-                                 style="width: {{ completion.percent }}%"></div>
+                                 style="width: {{ completion.percent }}%"
+                                 aria-valuenow="{{ completion.percent }}"
+                                 aria-valuemin="0"
+                                 aria-valuemax="100"></div>
                         </div>
                         <a href="{{ url_for('profile.view_profile') }}" class="btn btn-primary">
                             Complete profile
@@ -55,12 +61,13 @@
         </div>
 
         <!-- Saved programmes card -->
-        <div class="col-md-6">
+        <div class="col-lg-4 col-md-6">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
                     <h5 class="card-title">
                         <i class="bi bi-bookmark-star me-2"></i>Saved programmes
                     </h5>
+
                     {% if saved_count == 0 %}
                         <p class="text-muted">
                             You haven't saved any programmes yet.
@@ -83,8 +90,40 @@
                 </div>
             </div>
         </div>
+
+        <!-- Applications card -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-clipboard-check me-2"></i>Applications
+                    </h5>
+
+                    {% if applications_count == 0 %}
+                        <p class="text-muted">
+                            You haven't started any applications yet.
+                        </p>
+                        <a href="{{ url_for('saved.list_view') }}"
+                           class="btn btn-primary">
+                            <i class="bi bi-bookmark me-1"></i>Go to saved
+                        </a>
+                    {% else %}
+                        <p class="text-muted mb-2">
+                            You are tracking
+                            <strong>{{ applications_count }}</strong>
+                            application{{ "" if applications_count == 1 else "s" }}.
+                        </p>
+                        <a href="{{ url_for('applications.list_view') }}"
+                           class="btn btn-primary">
+                            <i class="bi bi-list-check me-1"></i>View applications
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
 
+    <!-- ===== Coming next ===== -->
     <div class="row g-4 mt-2">
         <div class="col-12">
             <div class="card shadow-sm border-0">
@@ -93,8 +132,8 @@
                         <i class="bi bi-compass me-2"></i>Coming next
                     </h5>
                     <p class="text-muted small mb-0">
-                        Application tracking, document uploads, and university
-                        inquiry emails appear here in the coming phases.
+                        Document uploads and university inquiry emails appear
+                        here in the coming phases.
                     </p>
                 </div>
             </div>

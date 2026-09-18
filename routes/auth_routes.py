@@ -12,6 +12,7 @@ from flask import (
     url_for,
 )
 
+from services.application_service import count_applications
 from services.auth_decorators import current_user, login_required
 from services.auth_service import AuthError, authenticate_user, register_user
 from services.forms import LoginForm, RegisterForm
@@ -98,18 +99,23 @@ def dashboard():
     profile = get_profile(user["id"], user["access_token"])
     completion = profile_completion(profile)
 
-    # Count saved programmes so the dashboard can show it.
-    # Wrap in try/except so a transient Supabase error doesn't
-    # break the whole dashboard — the count just falls back to 0.
+    # Saved count — falls back to 0 if Supabase is unreachable.
     try:
         saved_ids = list_saved_programme_ids(user["id"], user["access_token"])
         saved_count = len(saved_ids)
     except Exception:
         saved_count = 0
 
+    # Applications count — same fallback pattern.
+    try:
+        apps_count = count_applications(user["id"], user["access_token"])
+    except Exception:
+        apps_count = 0
+
     return render_template(
         "dashboard.html",
         user=user,
         completion=completion,
         saved_count=saved_count,
+        applications_count=apps_count,
     )

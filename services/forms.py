@@ -4,6 +4,8 @@ Flask-WTF handles CSRF tokens automatically when a form
 is rendered inside a template using {{ form.hidden_tag() }}.
 """
 
+from services.application_statuses import STATUS_CHOICES as APPLICATION_STATUSES_CHOICES
+from wtforms import DateField
 from flask_wtf import FlaskForm
 from wtforms import (
     BooleanField,
@@ -195,3 +197,35 @@ class ProfileForm(FlaskForm):
     )
 
     submit = SubmitField("Save profile")
+
+    # ============================================================
+# Application tracker form
+# ============================================================
+
+class ApplicationForm(FlaskForm):
+    """Edit form for a tracked application."""
+
+    status = SelectField(
+        "Status",
+        choices=APPLICATION_STATUSES_CHOICES,
+        validators=[DataRequired()],
+    )
+    application_date = DateField(
+        "Application date (optional)",
+        validators=[Optional()],
+        format="%Y-%m-%d",
+    )
+    deadline = DateField(
+        "Deadline (optional)",
+        validators=[Optional()],
+        format="%Y-%m-%d",
+    )
+    application_url = StringField(
+        "Application URL (optional)",
+        validators=[Optional(), Length(max=500)],
+    )
+    notes = TextAreaField(
+        "Notes (optional)",
+        validators=[Optional(), Length(max=5000)],
+    )
+    submit = SubmitField("Save application")

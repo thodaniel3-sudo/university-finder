@@ -1,5 +1,5 @@
 ﻿from datetime import datetime
-
+from routes.application_routes import application_bp
 from flask import Flask, render_template
 from flask_wtf.csrf import CSRFProtect
 from routes.saved_routes import saved_bp
@@ -33,6 +33,7 @@ def create_app(config_class=Config):
         }
 
     # ----- Blueprints -----
+    app.register_blueprint(application_bp)   # /applications
     app.register_blueprint(auth_bp)          # /register, /login, /logout, /dashboard
     app.register_blueprint(profile_bp)       # /profile
     app.register_blueprint(university_bp)    # /universities, /universities/<id>

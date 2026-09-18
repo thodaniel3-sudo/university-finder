@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Application — University Finder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <a href="{{ url_for('applications.list_view') }}"
+       class="btn btn-sm btn-outline-secondary mb-3">
+        <i class="bi bi-arrow-left me-2"></i>All applications
+    </a>
+
+    <!-- ===== Header card ===== -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                <div>
+                    <h1 class="fw-bold mb-2">
+                        {{ application.programme.programme_name or "(unknown programme)" }}
+                    </h1>
+                    <p class="text-muted mb-2">
+                        <i class="bi bi-building me-1"></i>
+                        {{ application.university.name or "(unknown university)" }}
+                        {% if application.university.city %}·
+                            {{ application.university.city }}{% endif %}
+                        {% if application.university.country %}·
+                            {{ application.university.country }}{% endif %}
+                    </p>
+                    <span class="badge bg-{{ application.status_color }} fs-6">
+                        {{ application.status_label }}
+                    </span>
+                </div>
+
+                <form method="post"
+                      action="{{ url_for('applications.delete_view', application_id=application.id) }}"
+                      onsubmit="return confirm('Delete this application? This cannot be undone.');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-trash me-1"></i>Delete
+                    </button>
+                </form>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="row g-3 small">
+                <div class="col-md-4">
+                    <div class="text-muted">Deadline</div>
+                    <div class="fw-semibold">
+                        <span class="badge bg-{{ application.deadline_info.tone }}">
+                            {{ application.deadline_info.text }}
+                        </span>
+                    </div>
+                </div>
+                {% if application.application_date %}
+                    <div class="col-md-4">
+                        <div class="text-muted">Applied on</div>
+                        <div class="fw-semibold">{{ application.application_date }}</div>
+                    </div>
+                {% endif %}
+                {% if application.programme.degree_level %}
+                    <div class="col-md-4">
+                        <div class="text-muted">Degree level</div>
+                        <div class="fw-semibold">{{ application.programme.degree_level }}</div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- ===== Edit form ===== -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-pencil-square me-2"></i>Update application
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {{ form.hidden_tag() }}
+
+                        <div class="mb-3">
+                            {{ form.status.label(class="form-label") }}
+                            {{ form.status(class="form-select" + (" is-invalid" if form.status.errors else "")) }}
+                            {% for e in form.status.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                {{ form.application_date.label(class="form-label") }}
+                                {{ form.application_date(class="form-control" + (" is-invalid" if form.application_date.errors else "")) }}
+                                {% for e in form.application_date.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.deadline.label(class="form-label") }}
+                                {{ form.deadline(class="form-control" + (" is-invalid" if form.deadline.errors else "")) }}
+                                {% for e in form.deadline.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3 mt-3">
+                            {{ form.application_url.label(class="form-label") }}
+                            {{ form.application_url(class="form-control" + (" is-invalid" if form.application_url.errors else ""), placeholder="https://...") }}
+                            {% for e in form.application_url.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.notes.label(class="form-label") }}
+                            {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), rows="6") }}
+                            {% for e in form.notes.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            {{ form.submit(class="btn btn-primary") }}
+                            <a href="{{ url_for('applications.list_view') }}"
+                               class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Programme sidebar ===== -->
+        <div class="col-lg-5">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle me-2"></i>Programme
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2">
+                        <strong>{{ application.programme.programme_name or "(unknown)" }}</strong>
+                    </p>
+                    {% if application.programme.study_mode %}
+                        <p class="small mb-2"><span class="badge bg-secondary">{{ application.programme.study_mode }}</span></p>
+                    {% endif %}
+                    {% if application.programme.duration %}
+                        <p class="small mb-2">
+                            <strong>Duration:</strong> {{ application.programme.duration }}
+                        </p>
+                    {% endif %}
+                    {% if application.programme.id %}
+                        <a href="{{ url_for('programmes.detail_view', programme_id=application.programme.id) }}"
+                           class="btn btn-sm btn-outline-primary mt-2">
+                            View full programme
+                            <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Applications — University Finder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h1 class="fw-bold mb-0">Applications</h1>
+            <p class="text-muted mb-0">
+                {{ applications|length }}
+                application{{ "" if applications|length == 1 else "s" }} tracked.
+            </p>
+        </div>
+        <a href="{{ url_for('saved.list_view') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-bookmark me-2"></i>Saved programmes
+        </a>
+    </div>
+
+    {% if applications %}
+        <!-- Summary badges -->
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            {% for code, label in status_labels.items() %}
+                {% if status_summary.get(code) %}
+                    <a href="#status-{{ code }}"
+                       class="badge bg-{{ status_colors[code] }} text-decoration-none">
+                        {{ label }}: {{ status_summary[code] }}
+                    </a>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <div class="row g-4">
+            {% for item in applications %}
+                {% set prog = item.programme %}
+                {% set uni = item.university %}
+                <div class="col-lg-6">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-0">
+                                    <a href="{{ url_for('applications.detail_view', application_id=item.id) }}"
+                                       class="text-decoration-none">
+                                        {{ prog.programme_name or "(unknown programme)" }}
+                                    </a>
+                                </h5>
+                                <span class="badge bg-{{ item.status_color }}">
+                                    {{ item.status_label }}
+                                </span>
+                            </div>
+
+                            <p class="text-muted small mb-2">
+                                <i class="bi bi-building me-1"></i>
+                                {{ uni.name or "(unknown university)" }}
+                                {% if uni.city %}· {{ uni.city }}{% endif %}
+                                {% if uni.country %}· {{ uni.country }}{% endif %}
+                            </p>
+
+                            <p class="small mb-2">
+                                {% if prog.degree_level %}
+                                    <span class="badge bg-primary">{{ prog.degree_level }}</span>
+                                {% endif %}
+                                {% if prog.field %}
+                                    <span class="badge bg-info text-dark">{{ prog.field }}</span>
+                                {% endif %}
+                            </p>
+
+                            <p class="small mb-2">
+                                <strong>Deadline:</strong>
+                                <span class="badge bg-{{ item.deadline_info.tone }}">
+                                    {{ item.deadline_info.text }}
+                                </span>
+                            </p>
+
+                            {% if item.application_date %}
+                                <p class="small text-muted mb-2">
+                                    <i class="bi bi-send me-1"></i>
+                                    Applied on {{ item.application_date }}
+                                </p>
+                            {% endif %}
+
+                            <div class="d-flex gap-2 mt-3">
+                                <a href="{{ url_for('applications.detail_view', application_id=item.id) }}"
+                                   class="btn btn-sm btn-primary">
+                                    Open <i class="bi bi-arrow-right ms-1"></i>
+                                </a>
+                                {% if prog.id %}
+                                    <a href="{{ url_for('programmes.detail_view', programme_id=prog.id) }}"
+                                       class="btn btn-sm btn-outline-secondary">
+                                        Programme
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card shadow-sm border-0">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-clipboard-check" style="font-size: 3rem; color: #adb5bd;"></i>
+                <h4 class="fw-bold mt-3">No applications yet</h4>
+                <p class="text-muted">
+                    Start tracking an application from any saved programme.
+                </p>
+                <a href="{{ url_for('saved.list_view') }}"
+                   class="btn btn-primary mt-2">
+                    <i class="bi bi-bookmark me-2"></i>Go to saved programmes
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
