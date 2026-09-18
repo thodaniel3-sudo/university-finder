@@ -75,3 +75,18 @@ def get_university(university_id: int) -> dict[str, Any] | None:
     if not response.data:
         return None
     return response.data[0]
+def programmes_with_requirements(university_id: int) -> list[dict[str, Any]]:
+    """
+    Return a flat list of programmes with their requirements attached,
+    ready for the matching engine.
+    """
+    uni = get_university(university_id)
+    if uni is None:
+        return []
+    result = []
+    for prog in uni.get("programmes", []) or []:
+        reqs = prog.get("admission_requirements") or []
+        prog_copy = {k: v for k, v in prog.items() if k != "admission_requirements"}
+        prog_copy["requirements"] = reqs[0] if reqs else None
+        result.append(prog_copy)
+    return result

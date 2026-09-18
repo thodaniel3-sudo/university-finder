@@ -9,6 +9,7 @@
         <i class="bi bi-arrow-left me-2"></i>All universities
     </a>
 
+    <!-- ===== University header card ===== -->
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body">
             <h1 class="fw-bold mb-2">{{ university.name }}</h1>
@@ -44,21 +45,68 @@
         </div>
     </div>
 
+    <!-- ===== No-profile notice ===== -->
+    {% if not profile and current_user %}
+        <div class="alert alert-info d-flex align-items-start">
+            <i class="bi bi-info-circle-fill me-2 mt-1"></i>
+            <div>
+                <strong>Want to see how you match?</strong>
+                <div class="small mt-1">
+                    <a href="{{ url_for('profile.view_profile') }}">Complete your academic profile</a>
+                    and this page will show you a transparent comparison
+                    against each programme's documented requirements.
+                </div>
+            </div>
+        </div>
+    {% elif not current_user %}
+        <div class="alert alert-info d-flex align-items-start">
+            <i class="bi bi-info-circle-fill me-2 mt-1"></i>
+            <div>
+                <strong>Want to see how you match?</strong>
+                <div class="small mt-1">
+                    <a href="{{ url_for('auth.login') }}">Log in</a> or
+                    <a href="{{ url_for('auth.register') }}">create an account</a>
+                    to see a transparent comparison against each programme's
+                    documented requirements.
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- ===== Programmes ===== -->
     <h2 class="fw-bold mb-3">
         Programmes
-        <span class="text-muted fs-6">
-            ({{ university.programmes|length }})
-        </span>
+        <span class="text-muted fs-6">({{ university.programmes|length }})</span>
     </h2>
 
     {% if university.programmes %}
         <div class="row g-4">
             {% for prog in university.programmes %}
-                {% set req = prog.admission_requirements[0] if prog.admission_requirements else None %}
+                {# --- Safe normalisation of admission_requirements --- #}
+                {% set _raw = prog.admission_requirements %}
+                {% if _raw is mapping %}
+                    {% set req = _raw %}
+                {% elif _raw is sequence and _raw is not string %}
+                    {% set req = _raw[0] if _raw else None %}
+                {% else %}
+                    {% set req = None %}
+                {% endif %}
+
+                {% set match = matches.get(prog.id) if matches else None %}
                 <div class="col-lg-6">
                     <div class="card shadow-sm border-0 h-100">
                         <div class="card-body">
-                            <h5 class="card-title mb-1">{{ prog.programme_name }}</h5>
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-0">{{ prog.programme_name }}</h5>
+                                {% if match %}
+                                    {% set overall = match.overall_status %}
+                                    <span class="badge bg-{{ match.requirements[0].color if match.requirements else 'secondary' }}"
+                                          title="{{ status_labels[overall] }}">
+                                        {{ match.meets_count }}/{{ match.total_count }} met
+                                    </span>
+                                {% endif %}
+                            </div>
+
                             <p class="text-muted small mb-2">
                                 <span class="badge bg-primary">{{ prog.degree_level }}</span>
                                 {% if prog.field %}
@@ -68,11 +116,38 @@
                                     <span class="badge bg-secondary">{{ prog.study_mode }}</span>
                                 {% endif %}
                             </p>
+
                             {% if prog.duration %}
                                 <p class="small mb-2"><strong>Duration:</strong> {{ prog.duration }}</p>
                             {% endif %}
 
-                            {% if req %}
+                            <!-- ===== Matching panel ===== -->
+                            {% if match %}
+                                <hr class="my-2">
+                                <h6 class="small fw-bold mb-2">
+                                    <i class="bi bi-clipboard-check me-1"></i>
+                                    Your match
+                                </h6>
+                                <ul class="list-unstyled small mb-3">
+                                    {% for r in match.requirements %}
+                                        <li class="mb-2 d-flex">
+                                            <span class="badge bg-{{ r.color }} me-2"
+                                                  style="min-width: 8rem;">
+                                                {{ r.status.value.replace('_', ' ').title() }}
+                                            </span>
+                                            <span>
+                                                <strong>{{ r.name }}:</strong>
+                                                {{ r.reason }}
+                                            </span>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                                {% set overall = match.overall_status %}
+                                <div class="alert alert-{{ match.requirements[0].color if match.requirements else 'secondary' }} py-2 px-3 small mb-3">
+                                    <strong>Overall:</strong> {{ status_labels[overall] }}
+                                </div>
+                            {% elif req %}
+                                <!-- Logged out or no profile: show requirements only -->
                                 <hr class="my-2">
                                 <h6 class="small fw-bold mb-2">Documented requirements</h6>
                                 <ul class="small mb-2">
@@ -123,7 +198,8 @@
                                 <a href="{{ prog.programme_url }}" target="_blank"
                                    rel="noopener noreferrer"
                                    class="btn btn-sm btn-outline-primary mt-3">
-                                    Programme page <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                    Programme page
+                                    <i class="bi bi-box-arrow-up-right ms-1"></i>
                                 </a>
                             {% endif %}
                         </div>

@@ -24,9 +24,9 @@ def create_app(config_class=Config):
         }
 
     # ----- Blueprints -----
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(profile_bp)
-    app.register_blueprint(university_bp)
+    app.register_blueprint(auth_bp)          # /register, /login, /logout, /dashboard
+    app.register_blueprint(profile_bp)       # /profile
+    app.register_blueprint(university_bp)    # /universities, /universities/<id>
 
     # ----- Public routes -----
     @app.route("/")
