@@ -1,7 +1,16 @@
 """
 Email generation and (in Phase 16) sending.
 """
-
+from services.email_handoff import (
+    build_gmail_compose_url,
+    build_mailto_url,
+    is_mailto_safe,
+)
+from services.email_service import (
+    mark_failed,
+    mark_handed_off,
+    mark_sent,
+)
 from flask import (
     Blueprint,
     abort,
@@ -247,3 +256,67 @@ def delete_view(email_id: int):
     delete_email(user["id"], user["access_token"], email_id)
     flash("Draft deleted.", "info")
     return redirect(url_for("emails.list_view"))
+
+@email_bp.route("/emails/<int:email_id>/send")
+@login_required
+def send_view(email_id: int):
+    """
+    The handoff page. Shows the full message and lets the user choose
+    how to send it (mail client, Gmail web, or copy to clipboard).
+    """
+    user = current_user()
+    row = get_email(user["id"], user["access_token"], email_id)
+    if row is None:
+        abort(404)
+
+    recipient = row.get("recipient_email") or ""
+    subject = row.get("subject") or ""
+    body = row.get("body") or ""
+
+    mailto_url = build_mailto_url(recipient, subject, body)
+    gmail_url = build_gmail_compose_url(recipient, subject, body)
+
+    return render_template(
+        "email_send.html",
+        email=row,
+        university=_normalise_nested(row.get("universities")) or {},
+        programme=_normalise_nested(row.get("programmes")) or {},
+        purpose_labels=PURPOSE_LABELS,
+        mailto_url=mailto_url,
+        gmail_url=gmail_url,
+        mailto_will_work=is_mailto_safe(mailto_url),
+    )
+
+
+@email_bp.route("/emails/<int:email_id>/mark-handed-off", methods=["POST"])
+@login_required
+def mark_handed_off_view(email_id: int):
+    """Called when the user clicks one of the handoff buttons."""
+    user = current_user()
+    mark_handed_off(user["id"], user["access_token"], email_id)
+    flash(
+        "Your email app should open with the message ready. "
+        "Come back here once you've sent it.",
+        "info",
+    )
+    return redirect(url_for("emails.detail_view", email_id=email_id))
+
+
+@email_bp.route("/emails/<int:email_id>/mark-sent", methods=["POST"])
+@login_required
+def mark_sent_view(email_id: int):
+    """User confirmed they sent the email."""
+    user = current_user()
+    mark_sent(user["id"], user["access_token"], email_id)
+    flash("Marked as sent.", "success")
+    return redirect(url_for("emails.detail_view", email_id=email_id))
+
+
+@email_bp.route("/emails/<int:email_id>/mark-failed", methods=["POST"])
+@login_required
+def mark_failed_view(email_id: int):
+    """User reported the email did NOT send."""
+    user = current_user()
+    mark_failed(user["id"], user["access_token"], email_id)
+    flash("Marked as not sent. You can edit and try again.", "warning")
+    return redirect(url_for("emails.detail_view", email_id=email_id))

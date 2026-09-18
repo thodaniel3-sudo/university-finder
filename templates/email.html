@@ -32,11 +32,11 @@
                         {% if email.status == 'draft' %}
                             <span class="badge bg-secondary">Draft</span>
                         {% elif email.status == 'handed_off' %}
-                            <span class="badge bg-warning text-dark">Sent from your email app</span>
+                            <span class="badge bg-warning text-dark">Handed off to your email app</span>
                         {% elif email.status == 'sent' %}
                             <span class="badge bg-success">Sent</span>
                         {% elif email.status == 'failed' %}
-                            <span class="badge bg-danger">Failed</span>
+                            <span class="badge bg-danger">Not sent</span>
                         {% endif %}
                         <span class="text-muted small ms-2">
                             Created {{ (email.created_at or "")[:10] }}
@@ -68,20 +68,66 @@
         </div>
     </div>
 
+    {# ---- Status-dependent footer ---- #}
     {% if email.status == 'draft' %}
         <div class="card shadow-sm border-0 mt-4">
             <div class="card-body text-center">
                 <h5 class="fw-bold mb-2">Ready to send?</h5>
                 <p class="text-muted small mb-3">
-                    Phase 16 will add the send flow. For now, you can copy
-                    the message and send it from your own email address.
+                    We'll open your own email app with this message pre-filled.
+                    You send it from your own email address.
                 </p>
-                <button type="button"
-                        class="btn btn-primary"
-                        onclick="navigator.clipboard.writeText(document.querySelector('pre').innerText); this.innerText='Copied!';">
-                    <i class="bi bi-clipboard me-1"></i>Copy message
-                </button>
+                <a href="{{ url_for('emails.send_view', email_id=email.id) }}"
+                   class="btn btn-primary btn-lg">
+                    <i class="bi bi-send me-2"></i>Send this email
+                </a>
             </div>
+        </div>
+    {% elif email.status == 'handed_off' %}
+        <div class="card shadow-sm border-0 mt-4">
+            <div class="card-body">
+                <h5 class="fw-bold mb-2">
+                    <i class="bi bi-question-circle me-2"></i>Did you send it?
+                </h5>
+                <p class="text-muted small mb-3">
+                    You handed this email off to your email app. Let us know
+                    whether it went out.
+                </p>
+                <div class="d-flex gap-2 flex-wrap">
+                    <form method="post"
+                          action="{{ url_for('emails.mark_sent_view', email_id=email.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-circle me-1"></i>Yes, I sent it
+                        </button>
+                    </form>
+                    <form method="post"
+                          action="{{ url_for('emails.mark_failed_view', email_id=email.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-outline-warning">
+                            <i class="bi bi-x-circle me-1"></i>No, it didn't send
+                        </button>
+                    </form>
+                    <a href="{{ url_for('emails.send_view', email_id=email.id) }}"
+                       class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-repeat me-1"></i>Open again
+                    </a>
+                </div>
+            </div>
+        </div>
+    {% elif email.status == 'sent' %}
+        <div class="alert alert-success mt-4">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <strong>Sent on {{ (email.sent_at or "")[:10] }}.</strong>
+            If you don't hear back within a couple of weeks, consider sending
+            a polite follow-up.
+        </div>
+    {% elif email.status == 'failed' %}
+        <div class="alert alert-warning mt-4">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <strong>Marked as not sent.</strong>
+            You can
+            <a href="{{ url_for('emails.send_view', email_id=email.id) }}">try again</a>.
         </div>
     {% endif %}
 </div>

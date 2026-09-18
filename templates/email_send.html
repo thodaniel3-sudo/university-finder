@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}Send email — University Finder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <a href="{{ url_for('emails.detail_view', email_id=email.id) }}"
+       class="btn btn-sm btn-outline-secondary mb-3">
+        <i class="bi bi-arrow-left me-2"></i>Back to draft
+    </a>
+
+    <div class="row g-4">
+        <!-- ===== Message preview ===== -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-text me-2"></i>Message preview
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row small mb-3">
+                        <dt class="col-sm-3 text-muted">To</dt>
+                        <dd class="col-sm-9">{{ email.recipient_email }}</dd>
+
+                        <dt class="col-sm-3 text-muted">Subject</dt>
+                        <dd class="col-sm-9">{{ email.subject }}</dd>
+
+                        {% if university.name %}
+                            <dt class="col-sm-3 text-muted">University</dt>
+                            <dd class="col-sm-9">
+                                {{ university.name }}
+                                {% if programme.programme_name %}· {{ programme.programme_name }}{% endif %}
+                            </dd>
+                        {% endif %}
+                    </dl>
+
+                    <hr>
+
+                    <pre id="emailBody" style="white-space: pre-wrap; font-family: inherit; margin: 0;">{{ email.body }}</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Send options ===== -->
+        <div class="col-lg-5">
+            <div class="card shadow-sm border-0 sticky-lg-top" style="top: 1rem;">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-send me-2"></i>Send your email
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info small">
+                        <i class="bi bi-info-circle-fill me-1"></i>
+                        We'll open your own email app with this message pre-filled.
+                        You'll send it from your own email address — the university's
+                        reply will arrive in your normal inbox.
+                    </div>
+
+                    {% if mailto_will_work %}
+                        <a href="{{ mailto_url }}"
+                           class="btn btn-primary btn-lg w-100 mb-2"
+                           id="mailtoButton"
+                           data-mark-url="{{ url_for('emails.mark_handed_off_view', email_id=email.id) }}"
+                           data-csrf="{{ csrf_token() }}">
+                            <i class="bi bi-envelope-paper me-2"></i>Open in my email app
+                        </a>
+                        <p class="text-muted small text-center mb-3">
+                            Opens your default mail client
+                        </p>
+                    {% else %}
+                        <div class="alert alert-warning small">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                            This message is too long to hand off via the standard
+                            mail link. Use Gmail or Copy below.
+                        </div>
+                    {% endif %}
+
+                    <a href="{{ gmail_url }}"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="btn btn-outline-primary w-100 mb-2"
+                       id="gmailButton"
+                       data-mark-url="{{ url_for('emails.mark_handed_off_view', email_id=email.id) }}"
+                       data-csrf="{{ csrf_token() }}">
+                        <i class="bi bi-google me-2"></i>Open in Gmail
+                    </a>
+                    <p class="text-muted small text-center mb-3">
+                        Opens Gmail's web composer in a new tab
+                    </p>
+
+                    <button type="button"
+                            class="btn btn-outline-secondary w-100"
+                            onclick="navigator.clipboard.writeText(document.getElementById('emailBody').innerText); this.innerText='Copied to clipboard';">
+                        <i class="bi bi-clipboard me-2"></i>Copy message only
+                    </button>
+                    <p class="text-muted small text-center mb-0">
+                        Paste into any email app
+                    </p>
+                </div>
+            </div>
+
+            <!-- ===== After handoff ===== -->
+            {% if email.status == 'handed_off' %}
+                <div class="card shadow-sm border-0 mt-3">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-question-circle me-2"></i>Did you send it?
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small">
+                            Once you've clicked Send inside your email app,
+                            let us know so we can track it accurately.
+                        </p>
+                        <form method="post"
+                              action="{{ url_for('emails.mark_sent_view', email_id=email.id) }}"
+                              class="d-grid gap-2 mb-2">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle me-2"></i>Yes, I sent it
+                            </button>
+                        </form>
+                        <form method="post"
+                              action="{{ url_for('emails.mark_failed_view', email_id=email.id) }}"
+                              class="d-grid">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-outline-warning">
+                                <i class="bi bi-x-circle me-2"></i>No, it didn't send
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    function attachHandoff(buttonId) {
+        var btn = document.getElementById(buttonId);
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            // Fire-and-forget POST to mark the email as handed off.
+            // We don't wait for the response — we want the mailto: or Gmail
+            // link to open immediately without any network delay.
+            fetch(btn.dataset.markUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': btn.dataset.csrf,
+                },
+                body: 'csrf_token=' + encodeURIComponent(btn.dataset.csrf),
+                keepalive: true,
+            }).catch(function () {
+                // Silent — user is busy in their mail client.
+            });
+        });
+    }
+    attachHandoff('mailtoButton');
+    attachHandoff('gmailButton');
+});
+</script>
+{% endblock %}

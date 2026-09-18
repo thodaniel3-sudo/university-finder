@@ -156,3 +156,45 @@ def mark_sent(user_id: str, access_token: str, email_id: int) -> dict[str, Any]:
         .execute()
     )
     return response.data[0] if response.data else {}
+
+def mark_handed_off(user_id: str, access_token: str, email_id: int) -> dict[str, Any]:
+    """Mark an email as handed off to the user's email client."""
+    client = get_user_client(access_token)
+    response = (
+        client.table("email_logs")
+        .update({"status": "handed_off"})
+        .eq("user_id", user_id)
+        .eq("id", email_id)
+        .execute()
+    )
+    return response.data[0] if response.data else {}
+
+
+def mark_sent(user_id: str, access_token: str, email_id: int) -> dict[str, Any]:
+    """Mark an email as confirmed-sent by the user."""
+    from datetime import datetime, timezone
+    client = get_user_client(access_token)
+    response = (
+        client.table("email_logs")
+        .update({
+            "status": "sent",
+            "sent_at": datetime.now(timezone.utc).isoformat(),
+        })
+        .eq("user_id", user_id)
+        .eq("id", email_id)
+        .execute()
+    )
+    return response.data[0] if response.data else {}
+
+
+def mark_failed(user_id: str, access_token: str, email_id: int) -> dict[str, Any]:
+    """Mark an email as not-sent (user reported it didn't work)."""
+    client = get_user_client(access_token)
+    response = (
+        client.table("email_logs")
+        .update({"status": "failed"})
+        .eq("user_id", user_id)
+        .eq("id", email_id)
+        .execute()
+    )
+    return response.data[0] if response.data else {}
