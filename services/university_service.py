@@ -10,15 +10,26 @@ from typing import Any
 from services.supabase_service import get_public_client
 
 
-def list_universities(limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
-    """Return a page of universities with their programme count."""
+def list_universities(
+    limit: int = 50,
+    offset: int = 0,
+    country: str | None = None,
+) -> list[dict[str, Any]]:
+    """Return a page of universities, optionally filtered by country."""
     client = get_public_client()
-    response = (
+    query = (
         client.table("universities")
-        .select("id, name, country, city, website_url, status, "
-                "programmes(count)")
+        .select(
+            "id, name, country, city, website_url, status, "
+            "programmes(count)"
+        )
         .eq("status", "active")
-        .order("name")
+    )
+    if country:
+        query = query.eq("country", country)
+
+    response = (
+        query.order("name")
         .range(offset, offset + limit - 1)
         .execute()
     )
@@ -30,15 +41,18 @@ def list_universities(limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
     return rows
 
 
-def count_universities() -> int:
-    """Return total number of active universities."""
+def count_universities(country: str | None = None) -> int:
+    """Return total number of active universities, optionally by country."""
     client = get_public_client()
-    response = (
+    query = (
         client.table("universities")
         .select("id", count="exact")
         .eq("status", "active")
-        .execute()
     )
+    if country:
+        query = query.eq("country", country)
+
+    response = query.execute()
     return response.count or 0
 
 
@@ -75,6 +89,8 @@ def get_university(university_id: int) -> dict[str, Any] | None:
     if not response.data:
         return None
     return response.data[0]
+
+
 def programmes_with_requirements(university_id: int) -> list[dict[str, Any]]:
     """
     Return a flat list of programmes with their requirements attached,
@@ -90,3 +106,35 @@ def programmes_with_requirements(university_id: int) -> list[dict[str, Any]]:
         prog_copy["requirements"] = reqs[0] if reqs else None
         result.append(prog_copy)
     return result
+
+
+def list_countries() -> list[dict[str, Any]]:
+    """
+    Return the list of distinct countries with at least one active university,
+    with a count per country.
+
+    Returns a list like:
+        [{"country": "Nigeria", "count": 3},
+         {"country": "Ghana", "count": 2},
+         ...]
+    Sorted alphabetically by country.
+    """
+    client = get_public_client()
+    response = (
+        client.table("universities")
+        .select("country")
+        .eq("status", "active")
+        .execute()
+    )
+    rows = response.data or []
+    # Aggregate counts in Python — Supabase doesn't have a native GROUP BY
+    # via the client SDK, and the row count is small enough.
+    counts: dict[str, int] = {}
+    for row in rows:
+        c = (row.get("country") or "").strip()
+        if c:
+            counts[c] = counts.get(c, 0) + 1
+    return [
+        {"country": c, "count": counts[c]}
+        for c in sorted(counts.keys())
+    ]

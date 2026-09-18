@@ -11,6 +11,7 @@ from services.profile_service import get_profile
 from services.university_service import (
     count_universities,
     get_university,
+    list_countries,
     list_universities,
 )
 
@@ -40,10 +41,18 @@ def list_view():
     except (TypeError, ValueError):
         page = 1
 
+    # Country filter from the query string, sanitized.
+    raw_country = (request.args.get("country") or "").strip()
+    country = raw_country if raw_country else None
+
     offset = (page - 1) * PAGE_SIZE
-    rows = list_universities(limit=PAGE_SIZE, offset=offset)
-    total = count_universities()
+    rows = list_universities(limit=PAGE_SIZE, offset=offset, country=country)
+    total = count_universities(country=country)
     total_pages = max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE)
+
+    countries = list_countries()
+    # Grand total across all countries, for the summary line.
+    grand_total = sum(c["count"] for c in countries)
 
     return render_template(
         "universities.html",
@@ -51,6 +60,9 @@ def list_view():
         page=page,
         total_pages=total_pages,
         total=total,
+        country=country,
+        countries=countries,
+        grand_total=grand_total,
     )
 
 
