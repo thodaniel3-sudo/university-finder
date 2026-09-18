@@ -18,8 +18,15 @@
                     place — from search to submission.
                 </p>
                 <div class="d-flex flex-wrap gap-2">
-                    <a href="#" class="btn btn-light btn-lg disabled" aria-disabled="true">
-                        <i class="bi bi-search me-2"></i>Start searching (soon)
+                    {% if current_user %}
+    <a href="{{ url_for('auth.dashboard') }}" class="btn btn-light btn-lg">
+        <i class="bi bi-speedometer2 me-2"></i>Go to dashboard
+    </a>
+{% else %}
+    <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg">
+        <i class="bi bi-person-plus me-2"></i>Create account
+    </a>
+{% endif %}
                     </a>
                     <a href="{{ url_for('about') }}" class="btn btn-outline-light btn-lg">
                         Learn more

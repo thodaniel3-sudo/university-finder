@@ -3,6 +3,8 @@
 from flask import Flask, jsonify, render_template
 
 from config import Config
+from routes.auth_routes import auth_bp
+from services.auth_decorators import current_user
 from services.supabase_service import get_public_client
 
 
@@ -17,7 +19,11 @@ def create_app(config_class=Config):
         """Variables available to every template."""
         return {
             "current_year": datetime.now().year,
+            "current_user": current_user(),
         }
+
+    # ----- Blueprints -----
+    app.register_blueprint(auth_bp)  # routes defined at /login, /register, etc.
 
     # ----- Public routes -----
     @app.route("/")
@@ -28,14 +34,9 @@ def create_app(config_class=Config):
     def about():
         return render_template("about.html")
 
-    # ----- Temporary diagnostic route (remove in Phase 9) -----
+    # ----- Diagnostic route (still temporary — remove in Phase 9) -----
     @app.route("/_dbcheck")
     def db_check():
-        """
-        Confirms the Flask app can reach Supabase and read from the
-        universities table. Returns JSON. Will be removed once real
-        search routes exist.
-        """
         try:
             client = get_public_client()
             response = (
@@ -44,11 +45,7 @@ def create_app(config_class=Config):
                 .limit(5)
                 .execute()
             )
-            return jsonify({
-                "ok": True,
-                "count": response.count,
-                "rows": response.data,
-            })
+            return jsonify({"ok": True, "count": response.count, "rows": response.data})
         except Exception as exc:
             return jsonify({
                 "ok": False,
