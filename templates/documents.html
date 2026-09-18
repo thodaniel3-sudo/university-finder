@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Documents — University Finder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h1 class="fw-bold mb-0">Documents</h1>
+            <p class="text-muted mb-0">
+                {{ documents|length }}
+                document{{ "" if documents|length == 1 else "s" }} uploaded.
+            </p>
+        </div>
+        <a href="{{ url_for('auth.dashboard') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Dashboard
+        </a>
+    </div>
+
+    {% if type_counts %}
+        <div class="mb-4">
+            {% for code, label in type_labels.items() %}
+                {% if type_counts.get(code) %}
+                    <span class="badge bg-secondary me-1">
+                        {{ label }}: {{ type_counts[code] }}
+                    </span>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- ===== Upload form ===== -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-cloud-upload me-2"></i>Upload a document
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" novalidate>
+                        {{ form.hidden_tag() }}
+
+                        <div class="mb-3">
+                            {{ form.document_type.label(class="form-label") }}
+                            {{ form.document_type(class="form-select" + (" is-invalid" if form.document_type.errors else "")) }}
+                            {% for e in form.document_type.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.display_name.label(class="form-label") }}
+                            {{ form.display_name(class="form-control" + (" is-invalid" if form.display_name.errors else ""),
+                                                  placeholder="e.g. CV — updated Sept 2026") }}
+                            {% for e in form.display_name.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.file.label(class="form-label") }}
+                            {{ form.file(class="form-control" + (" is-invalid" if form.file.errors else "")) }}
+                            {% for e in form.file.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                            {% endfor %}
+                            <div class="form-text">
+                                PDF, DOC, DOCX, JPG, PNG. Max 5 MB.
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Document list ===== -->
+        <div class="col-lg-8">
+            {% if documents %}
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-folder2-open me-2"></i>Your documents
+                        </h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Size</th>
+                                    <th>Uploaded</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for doc in documents %}
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold">
+                                                {{ doc.display_name }}
+                                            </div>
+                                            <div class="small text-muted">
+                                                {{ doc.file_name }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info text-dark">
+                                                {{ type_labels.get(doc.document_type, doc.document_type) }}
+                                            </span>
+                                        </td>
+                                        <td class="small text-muted">
+                                            {{ (doc.size_bytes or 0) // 1024 }} KB
+                                        </td>
+                                        <td class="small text-muted">
+                                            {{ (doc.uploaded_at or "")[:10] }}
+                                        </td>
+                                        <td class="text-end">
+                                            <a href="{{ url_for('documents.download_view', document_id=doc.id) }}"
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-download me-1"></i>Download
+                                            </a>
+                                            <form method="post"
+                                                  action="{{ url_for('documents.delete_view', document_id=doc.id) }}"
+                                                  class="d-inline"
+                                                  onsubmit="return confirm('Delete this document? This cannot be undone.');">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% else %}
+                <div class="card shadow-sm border-0">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-folder-x" style="font-size: 3rem; color: #adb5bd;"></i>
+                        <h4 class="fw-bold mt-3">No documents yet</h4>
+                        <p class="text-muted mb-0">
+                            Upload your CV, transcripts, or certificates using
+                            the form on the left.
+                        </p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

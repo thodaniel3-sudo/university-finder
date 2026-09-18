@@ -3,7 +3,7 @@ WTForms form definitions.
 Flask-WTF handles CSRF tokens automatically when a form
 is rendered inside a template using {{ form.hidden_tag() }}.
 """
-
+from flask_wtf.file import FileField, FileAllowed, FileRequired
 from services.application_statuses import STATUS_CHOICES as APPLICATION_STATUSES_CHOICES
 from wtforms import DateField
 from flask_wtf import FlaskForm
@@ -229,3 +229,43 @@ class ApplicationForm(FlaskForm):
         validators=[Optional(), Length(max=5000)],
     )
     submit = SubmitField("Save application")
+
+
+
+    # ============================================================
+# Document upload form
+# ============================================================
+
+DOCUMENT_TYPES = [
+    ("cv",                    "CV / Résumé"),
+    ("transcript",            "Academic transcript"),
+    ("degree_certificate",    "Degree certificate"),
+    ("passport",              "Passport / ID"),
+    ("english_certificate",   "English test certificate (IELTS/TOEFL)"),
+    ("motivation_letter",     "Motivation letter"),
+    ("recommendation_letter", "Recommendation letter"),
+    ("other",                 "Other"),
+]
+
+
+class DocumentUploadForm(FlaskForm):
+    document_type = SelectField(
+        "Document type",
+        choices=DOCUMENT_TYPES,
+        validators=[DataRequired()],
+    )
+    display_name = StringField(
+        "Display name (optional)",
+        validators=[Optional(), Length(max=200)],
+    )
+    file = FileField(
+        "File (PDF, DOC, DOCX, JPG, PNG — max 5 MB)",
+        validators=[
+            FileRequired(message="Please select a file."),
+            FileAllowed(
+                ["pdf", "doc", "docx", "jpg", "jpeg", "png"],
+                message="Only PDF, DOC, DOCX, JPG, and PNG files are allowed.",
+            ),
+        ],
+    )
+    submit = SubmitField("Upload")

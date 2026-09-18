@@ -15,6 +15,7 @@ from flask import (
 from services.application_service import count_applications
 from services.auth_decorators import current_user, login_required
 from services.auth_service import AuthError, authenticate_user, register_user
+from services.document_service import list_documents
 from services.forms import LoginForm, RegisterForm
 from services.profile_service import get_profile, profile_completion
 from services.saved_service import list_saved_programme_ids
@@ -112,10 +113,18 @@ def dashboard():
     except Exception:
         apps_count = 0
 
+    # Documents count — same fallback pattern.
+    try:
+        docs = list_documents(user["id"], user["access_token"])
+        documents_count = len(docs)
+    except Exception:
+        documents_count = 0
+
     return render_template(
         "dashboard.html",
         user=user,
         completion=completion,
         saved_count=saved_count,
         applications_count=apps_count,
+        documents_count=documents_count,
     )

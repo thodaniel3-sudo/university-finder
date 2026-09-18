@@ -9,7 +9,7 @@ from routes.profile_routes import profile_bp
 from routes.programme_routes import programme_bp
 from routes.university_routes import university_bp
 from services.auth_decorators import current_user
-
+from routes.document_routes import document_bp
 
 def create_app(config_class=Config):
     """Application factory. Returns a configured Flask app."""
@@ -33,6 +33,11 @@ def create_app(config_class=Config):
         }
 
     # ----- Blueprints -----
+
+
+
+
+    app.register_blueprint(document_bp)      # /documents
     app.register_blueprint(application_bp)   # /applications
     app.register_blueprint(auth_bp)          # /register, /login, /logout, /dashboard
     app.register_blueprint(profile_bp)       # /profile
