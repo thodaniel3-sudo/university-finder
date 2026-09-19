@@ -120,6 +120,13 @@
                                        class="btn btn-sm btn-outline-primary">
                                         Visit page <i class="bi bi-box-arrow-up-right ms-1"></i>
                                     </a>
+                                    {% if r.source %}
+                                        <a href="https://search.brave.com/search?q=site%3A{{ r.source|urlencode }}+admissions+email"
+                                           target="_blank" rel="noopener noreferrer"
+                                           class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-envelope me-1"></i>Find email
+                                        </a>
+                                    {% endif %}
                                     {% if current_user %}
                                         <form method="post" action="{{ url_for('external.save_view') }}" class="d-inline">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

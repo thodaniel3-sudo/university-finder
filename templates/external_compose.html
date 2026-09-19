@@ -13,10 +13,27 @@
         <div class="col-lg-8">
             <div class="alert alert-warning small">
                 <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                We don't have the university's contact email for this result.
-                Visit <a href="{{ external.url }}" target="_blank" rel="noopener noreferrer">
-                    {{ external.source_domain or 'their page' }}
-                </a> to find their admissions address, then paste it below.
+                We don't have this university's contact email. Use one of these quick
+                links to find it, then paste the address below.
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <a href="{{ external.url }}" target="_blank" rel="noopener noreferrer"
+                   class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-globe me-1"></i>University page
+                </a>
+                {% if external.source_domain %}
+                    <a href="https://{{ external.source_domain }}/admissions"
+                       target="_blank" rel="noopener noreferrer"
+                       class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-door-open me-1"></i>Try /admissions
+                    </a>
+                    <a href="https://search.brave.com/search?q=site%3A{{ external.source_domain|urlencode }}+admissions+email"
+                       target="_blank" rel="noopener noreferrer"
+                       class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-search me-1"></i>Search for email
+                    </a>
+                {% endif %}
             </div>
 
             <div class="card shadow-sm border-0">
