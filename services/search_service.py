@@ -3,15 +3,15 @@ Search orchestration: query the database first, optionally augment with web.
 
 Public API:
     search_everything(query, page=1, per_page=20) -> {
-        "db_universities": [...],
         "db_programmes": [...],
+        "db_universities": [...],
         "db_total": int,
+        "db_programme_total": int,
+        "db_university_total": int,
         "db_page": int,
-        "db_per_page": int,
         "db_total_pages": int,
         "web_results": [...],
         "web_available": bool,
-        "web_page": int,
         "web_offset": int,
         "has_more_web": bool,
     }
@@ -35,9 +35,7 @@ def _search_db_programmes(query: str, limit: int, offset: int) -> tuple[list[dic
     """
     Search programmes by name/field/specialization.
 
-    Returns (rows, total_count). `total_count` is a best-effort estimate
-    because we search three columns — we may over-count if a row matches
-    multiple columns, so we deduplicate.
+    Returns (rows_for_this_page, total_count).
     """
     client = get_public_client()
     pattern = f"%{query}%"
@@ -74,7 +72,7 @@ def _search_db_programmes(query: str, limit: int, offset: int) -> tuple[list[dic
 
 
 def _search_db_universities(query: str, limit: int, offset: int) -> tuple[list[dict], int]:
-    """Search universities by name/city/country. Returns (rows, total_count)."""
+    """Search universities by name/city/country. Returns (rows, total)."""
     client = get_public_client()
     pattern = f"%{query}%"
 
@@ -131,12 +129,13 @@ def search_everything(
             "db_programmes": [],
             "db_universities": [],
             "db_total": 0,
+            "db_programme_total": 0,
+            "db_university_total": 0,
             "db_page": 1,
             "db_per_page": per_page,
             "db_total_pages": 1,
             "web_results": [],
             "web_available": is_web_search_available(),
-            "web_page": page,
             "web_offset": 0,
             "has_more_web": False,
         }
@@ -146,18 +145,18 @@ def search_everything(
     db_universities, uni_total = _search_db_universities(query, per_page, offset)
 
     db_total = prog_total + uni_total
-    db_total_pages = max(1, (max(prog_total, uni_total) + per_page - 1) // per_page)
+    # Pagination is driven by whichever result set is larger
+    max_per_set = max(prog_total, uni_total)
+    db_total_pages = max(1, (max_per_set + per_page - 1) // per_page)
 
-    # ---- Web search (same page) ----
+    # ---- Web search (paginated with same page number) ----
     web_results: list[dict] = []
     web_available = is_web_search_available()
     has_more_web = False
 
     if web_available:
-        # Only search the web if the DB is thin OR the user is on page 1.
-        # For page 2+, most users are browsing DB results — skip the API
-        # call to preserve quota.
-        should_hit_web = (db_total < 5) or (page == 1)
+        # On page 2+, only hit the web if the DB was thin (preserve quota).
+        should_hit_web = (page == 1) or (db_total < 5)
 
         if should_hit_web:
             web_query = f"{query} master programme university"
@@ -180,7 +179,6 @@ def search_everything(
         "db_total_pages": db_total_pages,
         "web_results": web_results,
         "web_available": web_available,
-        "web_page": page,
         "web_offset": offset,
         "has_more_web": has_more_web,
     }

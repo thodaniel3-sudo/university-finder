@@ -29,7 +29,6 @@ BRAVE_SEARCH_ENDPOINT = "https://api.search.brave.com/res/v1/web/search"
 # Key validation
 # ------------------------------------------------------------
 
-# Reject values that look like placeholders from .env.example files.
 _PLACEHOLDER_KEYS = {
     "your-key-here",
     "your-api-key",
@@ -72,9 +71,16 @@ def is_web_search_available() -> bool:
 # Search
 # ------------------------------------------------------------
 
-def search_web(query: str, count: int = 8) -> list[dict[str, Any]]:
+def search_web(
+    query: str,
+    count: int = 20,
+    offset: int = 0,
+) -> list[dict[str, Any]]:
     """
     Search the web for the given query via Brave Search.
+
+    `offset` is the number of results to skip. Brave uses 0-indexed offsets
+    and caps `offset + count` at 200 total results.
 
     Returns a list of results with:
         {
@@ -95,6 +101,14 @@ def search_web(query: str, count: int = 8) -> list[dict[str, Any]]:
     if not query:
         return []
 
+    # Brave caps pagination at 200 total results.
+    if offset >= 200:
+        return []
+
+    # Ensure count + offset doesn't exceed the 200-result cap.
+    if offset + count > 200:
+        count = 200 - offset
+
     headers = {
         "Accept": "application/json",
         "X-Subscription-Token": api_key,
@@ -102,6 +116,7 @@ def search_web(query: str, count: int = 8) -> list[dict[str, Any]]:
     params = {
         "q": query,
         "count": count,
+        "offset": offset,
         "safesearch": "moderate",
         "text_decorations": "0",
         "result_filter": "web",

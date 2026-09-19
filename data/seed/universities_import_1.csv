@@ -1,0 +1,17 @@
+name,country,state_region,city,website_url,official_email,description,source_url
+Universität Heidelberg,Germany,Baden-Württemberg,Heidelberg,https://www.uni-heidelberg.de,info@uni-heidelberg.de,"Germany's oldest university, founded in 1386. Strong in medicine, sciences, and humanities.",https://www.uni-heidelberg.de/en/about-us
+Humboldt-Universität zu Berlin,Germany,Berlin,Berlin,https://www.hu-berlin.de,info@hu-berlin.de,Historic Berlin university with strong humanities and natural sciences.,https://www.hu-berlin.de/en/about
+Universität Bonn,Germany,North Rhine-Westphalia,Bonn,https://www.uni-bonn.de,info@uni-bonn.de,"Major research university, home to many Nobel laureates.",https://www.uni-bonn.de/en/university
+University of Copenhagen,Denmark,Capital Region,Copenhagen,https://www.ku.dk,admission@adm.ku.dk,"Denmark's oldest and largest university, founded in 1479.",https://www.ku.dk/english/about
+Aarhus University,Denmark,Central Denmark,Aarhus,https://www.au.dk,au@au.dk,Modern Danish university with strong research across all disciplines.,https://www.au.dk/en/about/
+University of Oslo,Norway,Oslo,Oslo,https://www.uio.no,post@uio.no,"Norway's oldest university, founded in 1811.",https://www.uio.no/english/about/
+Norwegian University of Science and Technology,Norway,Trøndelag,Trondheim,https://www.ntnu.edu,post@ntnu.no,Norway's leading university for engineering and technology.,https://www.ntnu.edu/about
+Lund University,Sweden,Skåne,Lund,https://www.lunduniversity.lu.se,info@lu.se,One of Scandinavia's oldest and largest universities.,https://www.lunduniversity.lu.se/about
+Uppsala University,Sweden,Uppsala County,Uppsala,https://www.uu.se,registrator@uu.se,"Sweden's oldest university, founded in 1477.",https://www.uu.se/en/about-uu/
+University of Helsinki,Finland,Uusimaa,Helsinki,https://www.helsinki.fi,admissions@helsinki.fi,Finland's oldest and largest university.,https://www.helsinki.fi/en/about-us
+University of Amsterdam,Netherlands,North Holland,Amsterdam,https://www.uva.nl,admissions@uva.nl,Historic Dutch university with strong research in social sciences.,https://www.uva.nl/en/about-the-uva/about-the-uva.html
+Delft University of Technology,Netherlands,South Holland,Delft,https://www.tudelft.nl,admissions@tudelft.nl,Netherlands' leading technical university.,https://www.tudelft.nl/en/about-tu-delft
+ETH Zurich,Switzerland,Zurich,Zurich,https://ethz.ch,info@ethz.ch,World-leading technical university.,https://ethz.ch/en/the-eth-zurich.html
+EPFL,Switzerland,Vaud,Lausanne,https://www.epfl.ch,info@epfl.ch,Leading Swiss technical university.,https://www.epfl.ch/about/
+Trinity College Dublin,Ireland,Leinster,Dublin,https://www.tcd.ie,admissions@tcd.ie,Ireland's oldest and most prestigious university.,https://www.tcd.ie/about/
+University College Dublin,Ireland,Leinster,Dublin,https://www.ucd.ie,admissions@ucd.ie,Ireland's largest university.,https://www.ucd.ie/about-ucd/

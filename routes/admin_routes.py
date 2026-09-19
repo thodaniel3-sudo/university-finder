@@ -3,19 +3,18 @@ Admin dashboard and CRUD routes.
 Every route is protected by @admin_required.
 """
 
+import csv
+import io
+
 from flask import (
     Blueprint,
+    Response,
     abort,
     flash,
     redirect,
     render_template,
     request,
     url_for,
-)
-from services.csv_import_service import (
-    IMPORT_TYPES,
-    ImportError_,
-    run_import,
 )
 
 from services.admin_decorators import admin_required
@@ -31,6 +30,11 @@ from services.admin_service import (
     update_programme,
     update_university,
     upsert_requirements,
+)
+from services.csv_import_service import (
+    IMPORT_TYPES,
+    ImportError_,
+    run_import,
 )
 from services.forms import (
     AdminProgrammeForm,
@@ -85,7 +89,7 @@ def universities_new():
     if form.validate_on_submit():
         try:
             create_university(_university_payload(form))
-            flash(f"University created.", "success")
+            flash("University created.", "success")
             return redirect(url_for("admin.universities_list"))
         except Exception as exc:
             flash(f"Could not create university: {exc}", "danger")
@@ -227,6 +231,7 @@ def requirements_edit(programme_id: int):
 
     return render_template("admin/requirements_form.html", form=form, programme=programme)
 
+
 # ============================================================
 # Bulk CSV import
 # ============================================================
@@ -295,3 +300,103 @@ def import_submit():
         results=result,
         selected_type=import_type,
     )
+
+
+@admin_bp.route("/import/template/<import_type>.csv")
+@admin_required
+def import_template(import_type: str):
+    """Generate and download a blank CSV template for the chosen import type."""
+    if import_type not in IMPORT_TYPES:
+        abort(404)
+
+    cfg = IMPORT_TYPES[import_type]
+    schema = cfg["schema"]
+
+    # Build the CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Header row = all known columns for this import type
+    columns = schema["all"]
+    writer.writerow(columns)
+
+    # One example row (helpful for admins)
+    example = _example_row(import_type, columns)
+    writer.writerow(example)
+
+    csv_bytes = output.getvalue().encode("utf-8")
+
+    return Response(
+        csv_bytes,
+        mimetype="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename={import_type}_template.csv"
+        },
+    )
+
+
+def _example_row(import_type: str, columns: list[str]) -> list[str]:
+    """Return a single helpful example row for the given import type."""
+    examples = {
+        "universities": {
+            "name": "Example University",
+            "country": "Exampleland",
+            "state_region": "Example Region",
+            "city": "Example City",
+            "website_url": "https://example.edu",
+            "official_email": "info@example.edu",
+            "description": "A sample university.",
+            "source_url": "https://example.edu/about",
+        },
+        "programmes": {
+            "university_name": "Example University",
+            "programme_name": "MSc Computer Science",
+            "degree_level": "Master",
+            "field": "Computer Science",
+            "specialization": "Artificial Intelligence",
+            "language": "English",
+            "study_mode": "Full-time",
+            "duration": "2 years",
+            "programme_url": "https://example.edu/msc-cs",
+            "application_url": "https://example.edu/apply",
+        },
+        "requirements": {
+            "university_name": "Example University",
+            "programme_name": "MSc Computer Science",
+            "degree_level": "Master",
+            "minimum_cgpa": "3.0",
+            "minimum_cgpa_scale": "4.0",
+            "minimum_degree": "Bachelor's degree in Computer Science",
+            "required_field": "Computer Science",
+            "english_requirement": "IELTS 6.5 or TOEFL 90",
+            "ielts_required": "true",
+            "ielts_minimum_score": "6.5",
+            "toefl_required": "true",
+            "toefl_minimum_score": "90",
+            "gre_required": "false",
+            "work_experience_required": "",
+            "other_requirements": "",
+            "source_url": "https://example.edu/msc-cs/requirements",
+        },
+        "scholarships": {
+            "scholarship_id": "SCH-001",
+            "scholarship_name": "Example Scholarship",
+            "provider": "Example Foundation",
+            "country": "Exampleland",
+            "study_level": "Master",
+            "eligible_field": "Any",
+            "funding_type": "Full tuition",
+            "tuition_coverage": "true",
+            "living_allowance": "true",
+            "travel_allowance": "false",
+            "insurance_coverage": "true",
+            "amount": "20000",
+            "currency": "USD",
+            "eligible_nationalities": "International",
+            "deadline": "2026-12-31",
+            "eligibility": "Open to international students.",
+            "scholarship_url": "https://example.org/scholarship",
+        },
+    }
+    example = examples.get(import_type, {})
+    return [example.get(c, "") for c in columns]

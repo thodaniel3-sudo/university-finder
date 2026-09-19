@@ -21,23 +21,20 @@ search_bp = Blueprint("search", __name__)
 @search_bp.route("/search")
 def search_view():
     query = (request.args.get("q") or "").strip()
-    results = search_everything(query)
 
-    # TEMPORARY DEBUG — remove after fixing
-    import sys
-    print(
-        f"[DEBUG SEARCH] query={query!r} "
-        f"db_count={results.get('db_count')} "
-        f"web_available={results.get('web_available')} "
-        f"web_results={len(results.get('web_results') or [])}",
-        file=sys.stderr,
-    )
+    try:
+        page = max(1, int(request.args.get("page", 1)))
+    except (TypeError, ValueError):
+        page = 1
+
+    results = search_everything(query, page=page)
 
     return render_template(
         "search.html",
         query=query,
         results=results,
     )
+
 
 @search_bp.route("/request-programme", methods=["POST"])
 def request_programme():
@@ -74,5 +71,4 @@ def request_programme():
     except Exception as exc:
         flash(f"Could not submit request: {exc}", "danger")
 
-    # Send the user back to their search results.
     return redirect(url_for("search.search_view", q=query))
