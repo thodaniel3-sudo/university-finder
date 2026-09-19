@@ -12,6 +12,11 @@ from flask import (
     request,
     url_for,
 )
+from services.csv_import_service import (
+    IMPORT_TYPES,
+    ImportError_,
+    run_import,
+)
 
 from services.admin_decorators import admin_required
 from services.admin_service import (
@@ -221,3 +226,72 @@ def requirements_edit(programme_id: int):
             flash(f"Could not save requirements: {exc}", "danger")
 
     return render_template("admin/requirements_form.html", form=form, programme=programme)
+
+# ============================================================
+# Bulk CSV import
+# ============================================================
+
+@admin_bp.route("/import", methods=["GET"])
+@admin_required
+def import_view():
+    """The CSV upload page."""
+    return render_template(
+        "admin/import.html",
+        import_types=IMPORT_TYPES,
+        results=None,
+        selected_type=None,
+    )
+
+
+@admin_bp.route("/import", methods=["POST"])
+@admin_required
+def import_submit():
+    """Handle the CSV upload."""
+    import_type = (request.form.get("import_type") or "").strip()
+    dry_run = bool(request.form.get("dry_run"))
+    uploaded = request.files.get("csv_file")
+
+    if not import_type or import_type not in IMPORT_TYPES:
+        flash("Please choose a valid import type.", "danger")
+        return redirect(url_for("admin.import_view"))
+
+    if not uploaded or not uploaded.filename:
+        flash("Please attach a CSV file.", "danger")
+        return redirect(url_for("admin.import_view"))
+
+    if not uploaded.filename.lower().endswith(".csv"):
+        flash("Only .csv files are accepted.", "danger")
+        return redirect(url_for("admin.import_view"))
+
+    file_bytes = uploaded.read()
+
+    # 5 MB limit
+    if len(file_bytes) > 5 * 1024 * 1024:
+        flash("File is too large (max 5 MB).", "danger")
+        return redirect(url_for("admin.import_view"))
+
+    try:
+        result = run_import(import_type, file_bytes, dry_run=dry_run)
+    except ImportError_ as exc:
+        flash(f"Import failed: {exc}", "danger")
+        return render_template(
+            "admin/import.html",
+            import_types=IMPORT_TYPES,
+            results=None,
+            selected_type=import_type,
+        )
+    except Exception as exc:
+        flash(f"Unexpected error: {exc}", "danger")
+        return render_template(
+            "admin/import.html",
+            import_types=IMPORT_TYPES,
+            results=None,
+            selected_type=import_type,
+        )
+
+    return render_template(
+        "admin/import.html",
+        import_types=IMPORT_TYPES,
+        results=result,
+        selected_type=import_type,
+    )

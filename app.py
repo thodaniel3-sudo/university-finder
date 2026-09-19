@@ -1,21 +1,22 @@
 ﻿from datetime import datetime
-from routes.search_routes import search_bp
+
 from flask import Flask, render_template
 from flask_wtf.csrf import CSRFProtect
-from routes.email_routes import email_bp
+
 from config import Config
+from routes.admin_routes import admin_bp
 from routes.application_routes import application_bp
 from routes.auth_routes import auth_bp
 from routes.document_routes import document_bp
+from routes.email_routes import email_bp
+from routes.external_routes import external_bp
 from routes.profile_routes import profile_bp
 from routes.programme_routes import programme_bp
 from routes.saved_routes import saved_bp
+from routes.search_routes import search_bp
 from routes.university_routes import university_bp
 from services.auth_decorators import current_user
-from routes.admin_routes import admin_bp
-from routes.external_routes import external_bp
-
-
+from services.rate_limit import limiter
 
 
 def create_app(config_class=Config):
@@ -30,6 +31,9 @@ def create_app(config_class=Config):
     csrf = CSRFProtect()
     csrf.init_app(app)
 
+    # Rate limiter — per-route limits are applied via @limiter.limit()
+    limiter.init_app(app)
+
     # ----- Template context processors -----
     @app.context_processor
     def inject_globals():
@@ -40,8 +44,6 @@ def create_app(config_class=Config):
         }
 
     # ----- Blueprints -----
-    app.register_blueprint(external_bp)      # /external/*
-    app.register_blueprint(search_bp)        # /search
     app.register_blueprint(auth_bp)          # /register, /login, /logout, /dashboard
     app.register_blueprint(admin_bp)         # /admin
     app.register_blueprint(profile_bp)       # /profile
@@ -51,6 +53,9 @@ def create_app(config_class=Config):
     app.register_blueprint(application_bp)   # /applications
     app.register_blueprint(document_bp)      # /documents
     app.register_blueprint(email_bp)         # /emails
+    app.register_blueprint(external_bp)      # /external/*
+    app.register_blueprint(search_bp)        # /search
+
     # ----- Public routes -----
     @app.route("/")
     def index():
@@ -65,12 +70,25 @@ def create_app(config_class=Config):
     def not_found(error):
         return render_template("404.html"), 404
 
+    @app.errorhandler(429)
+    def rate_limit_exceeded(e):
+        return render_template("429.html"), 429
+
     # ----- Global Supabase JWT-expired handling -----
-    from services.session_refresh import is_jwt_expired_error, refresh_access_token as _refresh
+    from services.session_refresh import (
+        is_jwt_expired_error,
+        refresh_access_token as _refresh,
+    )
 
     @app.errorhandler(Exception)
     def handle_unexpected_error(exc):
-        from flask import flash, redirect, request, session as flask_session, url_for
+        from flask import (
+            flash,
+            redirect,
+            request,
+            session as flask_session,
+            url_for,
+        )
         from werkzeug.exceptions import HTTPException
 
         # Let HTTP exceptions (404, 403, etc.) pass through.

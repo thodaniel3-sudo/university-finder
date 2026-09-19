@@ -11,7 +11,7 @@ from flask import (
     session,
     url_for,
 )
-
+from services.rate_limit import limiter
 from services.application_service import count_applications
 from services.auth_decorators import current_user, login_required
 from services.auth_service import AuthError, authenticate_user, register_user
@@ -26,7 +26,9 @@ auth_bp = Blueprint("auth", __name__)
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
+@limiter.limit("5 per minute", methods=["POST"])
 def register():
+
     if session.get("user_id"):
         return redirect(url_for("auth.dashboard"))
 
@@ -49,9 +51,10 @@ def register():
 
     return render_template("register.html", form=form)
 
-
 @auth_bp.route("/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute", methods=["POST"])
 def login():
+
     if session.get("user_id"):
         return redirect(url_for("auth.dashboard"))
 
