@@ -82,3 +82,28 @@ This app is deployed on Render as a single Python web service.
 - `BRAVE_SEARCH_API_KEY` — from Brave Search dashboard (optional)
 
 Never commit real values. Set them in Render's Environment tab.
+
+## Security: Before every commit
+
+Run the secret scanner before committing:
+
+    python scripts/scan_for_secrets.py
+
+It scans all git-tracked files for patterns that look like API keys, tokens,
+JWT credentials, or private keys. If it finds anything, fix it before pushing.
+
+### `.env` discipline
+
+- **Never** commit `.env` — it's in `.gitignore`.
+- **Never** paste real keys into `README.md`, docs, or code comments.
+- **Never** paste real keys into chat, emails, or screenshots.
+- `.env.example` only contains **placeholders**, never real values.
+- If you ever leak a key: revoke it immediately (rotate), then update `.env`.
+
+### Rotating a leaked key
+
+1. Log in to the provider (Brave, Resend, Supabase, etc.)
+2. Delete the leaked key
+3. Generate a new one
+4. Paste the new value into `.env`
+5. Restart the app
