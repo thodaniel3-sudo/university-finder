@@ -1,4 +1,10 @@
-﻿from datetime import datetime
+﻿
+
+
+# BSA_fakekey_testing_secret_scanner_1234567890abcdef
+
+
+from datetime import datetime
 
 from flask import Flask, render_template
 from flask_wtf.csrf import CSRFProtect

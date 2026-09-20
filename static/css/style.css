@@ -46,6 +46,190 @@ main {
     display: block;
     margin: 0 auto;
 }
+/* =========================================================
+   SAVED PROGRAMS BUTTON
+   Designed for the blue University Finder hero section
+   ========================================================= */
+
+.saved-program-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 9px;
+
+    height: 40px;
+    padding: 0 16px;
+
+    margin-left: 6px;
+
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    border-radius: 7px;
+
+    background: transparent;
+
+    color: #ffffff;
+
+    text-decoration: none;
+
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 500;
+
+    line-height: 1;
+
+    white-space: nowrap;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.2s ease,
+        color 0.2s ease,
+        border-color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+/* =========================================================
+   BOOKMARK ICON
+   ========================================================= */
+
+.saved-program-link .icon {
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    width: 18px;
+    height: 18px;
+
+    font-size: 16px;
+    line-height: 1;
+
+    flex-shrink: 0;
+
+    filter: grayscale(100%) brightness(0) invert(1);
+
+    transition:
+        transform 0.2s ease,
+        filter 0.2s ease;
+}
+
+
+/* =========================================================
+   TEXT
+   ========================================================= */
+
+.saved-program-link span:last-child {
+    display: inline-block;
+
+    color: inherit;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   HOVER
+   ========================================================= */
+
+.saved-program-link:hover {
+    background: #ffffff;
+
+    color: #1769e0;
+
+    border-color: #ffffff;
+
+    transform: translateY(-1px);
+
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+
+.saved-program-link:hover .icon {
+    transform: scale(1.08);
+
+    filter: none;
+}
+
+
+/* =========================================================
+   CLICK / ACTIVE
+   ========================================================= */
+
+.saved-program-link:active {
+    transform: translateY(0) scale(0.98);
+
+    box-shadow: none;
+}
+
+
+/* =========================================================
+   KEYBOARD ACCESSIBILITY
+   ========================================================= */
+
+.saved-program-link:focus {
+    outline: none;
+}
+
+.saved-program-link:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 3px;
+}
+
+
+/* =========================================================
+   WHEN INSIDE A BUTTON GROUP
+   ========================================================= */
+
+.hero-buttons .saved-program-link,
+.hero-actions .saved-program-link,
+.actions .saved-program-link {
+    margin-left: 0;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 768px) {
+
+    .saved-program-link {
+        height: 42px;
+
+        padding: 0 15px;
+
+        margin-left: 0;
+
+        font-size: 14px;
+    }
+
+    .saved-program-link .icon {
+        font-size: 15px;
+    }
+}
+
+
+/* =========================================================
+   SMALL MOBILE
+   ========================================================= */
+
+@media (max-width: 480px) {
+
+    .saved-program-link {
+        width: 100%;
+
+        height: 44px;
+
+        padding: 0 14px;
+
+        margin-top: 8px;
+
+        justify-content: center;
+    }
+}
 
 /* ---------- Navbar ---------- */
 .navbar-brand {

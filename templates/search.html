@@ -28,7 +28,7 @@
         <!-- ===== From our database ===== -->
         <h4 class="fw-bold mb-3">
             <i class="bi bi-database me-2 text-success"></i>
-            From our database
+            From our first database
             <span class="text-muted fs-6">
                 ({{ results.db_programme_total + results.db_university_total }})
             </span>
@@ -94,7 +94,7 @@
         {% if results.db_programme_total == 0 and results.db_university_total == 0 %}
             <div class="alert alert-secondary">
                 <i class="bi bi-info-circle me-1"></i>
-                Nothing in our database matches that search.
+                Nothing in our  first database  matches that search see the second database below
             </div>
         {% endif %}
 
@@ -137,16 +137,17 @@
         {% if results.web_results %}
             <h4 class="fw-bold mb-3 mt-5">
                 <i class="bi bi-globe me-2 text-primary"></i>
-                From the web
+                From the second databse
                 <span class="text-muted fs-6">({{ results.web_results|length }})</span>
             </h4>
-
-            <div class="alert alert-warning small">
+<!-- ===== Web section =            <div class="alert alert-warning small">
                 <i class="bi bi-exclamation-triangle-fill me-1"></i>
                 These results come from a web search. We have <strong>not</strong>
                 verified them. Visit each university's page to confirm programme
                 details, deadlines, and requirements.
             </div>
+ ===== -->
+
 
             <div class="row g-3 mb-4">
                 {% for r in results.web_results %}
@@ -197,13 +198,13 @@
         {% elif results.web_available %}
             <div class="alert alert-info mt-4">
                 <i class="bi bi-info-circle-fill me-1"></i>
-                <strong>No web results found for that exact query.</strong>
+                <strong>No search results found for that exact query.</strong>
                 Try broader keywords, or use the form below to request a programme.
             </div>
         {% else %}
             <div class="alert alert-info mt-4">
                 <i class="bi bi-info-circle-fill me-1"></i>
-                <strong>Web search is not configured.</strong>
+                <strong>search is not configured yet.</strong>
                 Only results from our database are shown above.
                 If you know this programme exists and want us to add it,
                 use the form below.
