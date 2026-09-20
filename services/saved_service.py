@@ -6,6 +6,7 @@ All operations go through the USER client — RLS enforces ownership.
 
 from typing import Any
 
+from services.external_service import list_external
 from services.supabase_service import get_user_client
 
 
@@ -85,3 +86,81 @@ def list_saved_programmes(user_id: str, access_token: str) -> list[dict[str, Any
         .execute()
     )
     return response.data or []
+
+
+def list_all_saved_for_emailing(
+    user_id: str, access_token: str
+) -> dict[str, Any]:
+    """
+    Merge DB-saved and web-saved programmes into one emailing list.
+
+    Returns a dict shaped for templates/saved_programs.html:
+        {
+            "items": [...],
+            "total": int,
+            "db_count": int,
+            "external_count": int,
+            "not_emailed_count": int,
+        }
+
+    NOTE: email tracking is not yet implemented — `already_emailed` is
+    always False for now. See Phase 18.10 (planned).
+    """
+    db_rows = list_saved_programmes(user_id, access_token) or []
+    ext_rows = list_external(user_id, access_token) or []
+
+    items: list[dict[str, Any]] = []
+
+    # --- DB-saved programmes ---------------------------------------------
+    for row in db_rows:
+        prog = row.get("programmes") or {}
+        if isinstance(prog, list):
+            prog = prog[0] if prog else {}
+        if not prog:
+            continue
+
+        uni = prog.get("universities") or {}
+        if isinstance(uni, list):
+            uni = uni[0] if uni else {}
+
+        programme_id = prog.get("id")
+        items.append({
+            "kind": "db",
+            "programme_id": programme_id,
+            "programme_name": prog.get("programme_name"),
+            "university_name": uni.get("name"),
+            "university_country": uni.get("country"),
+            "degree_level": prog.get("degree_level"),
+            "field": prog.get("field"),
+            "already_emailed": False,
+            # Adjust query param name here if compose route expects
+            # something other than `programme_id`.
+            "send_url": f"/emails/compose?programme_id={programme_id}",
+        })
+
+    # --- Web-saved (external) programmes ---------------------------------
+    for row in ext_rows:
+        external_id = row.get("id")
+        items.append({
+            "kind": "external",
+            "external_id": external_id,
+            "programme_name": row.get("title"),
+            "university_name": row.get("source_domain"),
+            "university_country": None,
+            "degree_level": None,
+            "field": None,
+            "already_emailed": False,
+            # Adjust query param name here if compose route expects
+            # something other than `external_programme_id`.
+            "send_url": f"/emails/compose?external_programme_id={external_id}",
+        })
+
+    not_emailed = sum(1 for i in items if not i["already_emailed"])
+
+    return {
+        "items": items,
+        "total": len(items),
+        "db_count": len(db_rows),
+        "external_count": len(ext_rows),
+        "not_emailed_count": not_emailed,
+    }

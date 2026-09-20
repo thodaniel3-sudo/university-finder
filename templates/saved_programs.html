@@ -8,9 +8,9 @@
         <div>
             <h1 class="fw-bold mb-0">Programmes to contact</h1>
             <p class="text-muted mb-0">
-                {{ result.total }} saved
-                {% if result.not_emailed_count %}
-                    · <strong>{{ result.not_emailed_count }} awaiting an email</strong>
+                {{ result["total"] }} saved
+                {% if result["not_emailed_count"] %}
+                    · <strong>{{ result["not_emailed_count"] }} awaiting an email</strong>
                 {% endif %}
             </p>
         </div>
@@ -23,18 +23,18 @@
     <div class="btn-group mb-4" role="group" aria-label="Filter">
         <a href="{{ url_for('saved.programs_view', filter='all') }}"
            class="btn btn-sm {% if not request.args.get('filter') or request.args.get('filter') == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">
-            All ({{ result.total }})
+            All ({{ result["total"] }})
         </a>
         <a href="{{ url_for('saved.programs_view', filter='pending') }}"
            class="btn btn-sm {% if request.args.get('filter') == 'pending' %}btn-primary{% else %}btn-outline-primary{% endif %}">
-            Awaiting email ({{ result.not_emailed_count }})
+            Awaiting email ({{ result["not_emailed_count"] }})
         </a>
     </div>
 
-    {% if result.items %}
+    {% if result["items"] %}
         {% set show_filter = request.args.get('filter') %}
         <div class="row g-3">
-            {% for item in result.items %}
+            {% for item in result["items"] %}
                 {% if not show_filter or show_filter == 'all' or (show_filter == 'pending' and not item.already_emailed) %}
                     <div class="col-12">
                         <div class="card shadow-sm border-0">
@@ -112,7 +112,7 @@
             {% endfor %}
         </div>
 
-        {% if show_filter == 'pending' and result.not_emailed_count == 0 %}
+        {% if show_filter == 'pending' and result["not_emailed_count"] == 0 %}
             <div class="alert alert-success">
                 <i class="bi bi-check-circle-fill me-2"></i>
                 You've emailed every saved programme.
