@@ -42,19 +42,18 @@
                             <i class="bi bi-person-plus me-2"></i>Create account
                         </a>
                     {% endif %}
+
                     <a href="{{ url_for('about') }}" class="btn btn-outline-light">
                         Learn more
                     </a>
 
-                    <a href="{{ url_for('saved.list_view') }}" class="saved-program-link">
-    <span class="icon">🔖</span>
-    <span>Saved Programs</span>
-</a> 
+                    <a href="{{ url_for('saved.list_view') }}" class="btn btn-outline-light">
+                        <i class="bi bi-bookmark me-2"></i>Saved programmes
+                    </a>
 
-<a href="{{ url_for('saved.programs_view') }}" class="btn btn-primary">
-    <i class="bi bi-envelope-paper me-2"></i>Email saved programmes
-</a>
-
+                    <a href="{{ url_for('saved.programs_view') }}" class="btn btn-outline-light">
+                        <i class="bi bi-envelope-paper me-2"></i>Email saved programmes
+                    </a>
                 </div>
 
                 <p class="text-white-50 small mt-3 mb-0">
