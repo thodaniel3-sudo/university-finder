@@ -64,11 +64,14 @@ def authenticate_user(email: str, password: str) -> dict[str, Any]:
     if response.user is None or response.session is None:
         raise AuthError("Invalid email or password.")
 
+        expires_at = getattr(response.session, "expires_at", None)
+
     return {
         "id": response.user.id,
         "email": response.user.email,
         "access_token": response.session.access_token,
         "refresh_token": response.session.refresh_token,
+        "expires_at": int(expires_at) if expires_at else 0,
     }
 
 
@@ -84,3 +87,32 @@ def sign_out_user(access_token: str) -> None:
     except Exception:
         # Nothing we can do — session will expire on Supabase anyway.
         pass
+
+
+def refresh_session(refresh_token: str) -> dict[str, Any]:
+    """
+    Exchange a refresh token for a new access token.
+
+    Returns:
+        {
+            "access_token": str,
+            "refresh_token": str,
+            "expires_at": int,   # unix timestamp
+        }
+
+    Raises AuthError if the refresh token itself is expired or revoked.
+    """
+    client = get_public_client()
+    try:
+        response = client.auth.refresh_session(refresh_token)
+    except Exception as exc:
+        raise AuthError("Your session has expired. Please log in again.") from exc
+
+    if response.session is None:
+        raise AuthError("Your session has expired. Please log in again.")
+
+    return {
+        "access_token": response.session.access_token,
+        "refresh_token": response.session.refresh_token,
+        "expires_at": int(response.session.expires_at),
+    }

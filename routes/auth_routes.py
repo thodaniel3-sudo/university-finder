@@ -67,6 +67,7 @@ def login():
         except AuthError as exc:
             flash(str(exc), "danger")
             return render_template("login.html", form=form)
+        
 
         # Store the access and refresh tokens for authenticated calls.
         session.clear()
@@ -74,7 +75,9 @@ def login():
         session["user_email"] = user["email"]
         session["access_token"] = user["access_token"]
         session["refresh_token"] = user.get("refresh_token")
+        session["expires_at"] = user.get("expires_at", 0)
         session.permanent = bool(form.remember_me.data)
+        
 
         # Fetch is_admin from the user's profile and store in session.
         # If the profile doesn't exist yet, treat as non-admin.

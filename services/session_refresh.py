@@ -71,10 +71,15 @@ def refresh_access_token() -> bool:
     if not response or not response.session:
         session.clear()
         return False
+    
 
     session["access_token"] = response.session.access_token
     # Supabase rotates refresh tokens — always store the latest.
     session["refresh_token"] = response.session.refresh_token
+    # Store the new expiry so we don't refresh again until we need to.
+    expires_at = getattr(response.session, "expires_at", None)
+    if expires_at:
+        session["expires_at"] = int(expires_at)
     return True
 
 
