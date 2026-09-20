@@ -131,6 +131,7 @@ def compose_view(external_id: int):
                 "email_type": "general_inquiry",
                 "university_id": None,
                 "programme_id": None,
+                "external_programme_id": external_id,
             }
             return redirect(url_for("emails.review_view"))
 

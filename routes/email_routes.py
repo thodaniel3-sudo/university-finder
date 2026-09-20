@@ -1,16 +1,7 @@
 """
-Email generation and (in Phase 16) sending.
+Email generation and handoff flow.
 """
-from services.email_handoff import (
-    build_gmail_compose_url,
-    build_mailto_url,
-    is_mailto_safe,
-)
-from services.email_service import (
-    mark_failed,
-    mark_handed_off,
-    mark_sent,
-)
+
 from flask import (
     Blueprint,
     abort,
@@ -24,12 +15,20 @@ from flask import (
 
 from services.auth_decorators import current_user, login_required
 from services.email_generator import generate_email_draft
+from services.email_handoff import (
+    build_gmail_compose_url,
+    build_mailto_url,
+    is_mailto_safe,
+)
 from services.email_purposes import PURPOSE_LABELS
 from services.email_service import (
     create_draft,
     delete_email,
     get_email,
     list_emails,
+    mark_failed,
+    mark_handed_off,
+    mark_sent,
 )
 from services.forms import EmailComposeForm, EmailReviewForm
 from services.profile_service import get_profile
@@ -117,6 +116,17 @@ def compose_view():
         (p["id"], f"{p['programme_name']} — {p.get('degree_level', '')}") for p in programmes
     ]
 
+    # ---- Pre-select from query params (used by /saved/programs Send button) ----
+    if request.method == "GET":
+        preload_prog = request.args.get("programme_id", type=int)
+        if preload_prog:
+            form.programme_id.data = preload_prog
+            # Also pre-select the university
+            for p in programmes:
+                if p["id"] == preload_prog:
+                    form.university_id.data = p["university_id"]
+                    break
+
     if form.validate_on_submit():
         university_id = form.university_id.data or 0
         programme_id = form.programme_id.data or 0
@@ -181,6 +191,7 @@ def compose_view():
             "email_type": form.email_type.data,
             "university_id": university["id"],
             "programme_id": programme["id"] if programme else None,
+            "external_programme_id": None,
         }
         return redirect(url_for("emails.review_view"))
 
@@ -210,6 +221,7 @@ def review_view():
                 email_type=form.email_type.data,
                 university_id=draft.get("university_id"),
                 programme_id=draft.get("programme_id"),
+                external_programme_id=draft.get("external_programme_id"),
             )
         except Exception as exc:
             flash(f"Could not save draft: {exc}", "danger")
@@ -217,10 +229,7 @@ def review_view():
 
         session.pop("email_draft", None)
 
-        flash(
-            "Draft saved. Phase 16 will add the send flow.",
-            "success",
-        )
+        flash("Draft saved.", "success")
         return redirect(url_for("emails.detail_view", email_id=row["id"]))
 
     if not form.is_submitted():
@@ -256,6 +265,7 @@ def delete_view(email_id: int):
     delete_email(user["id"], user["access_token"], email_id)
     flash("Draft deleted.", "info")
     return redirect(url_for("emails.list_view"))
+
 
 @email_bp.route("/emails/<int:email_id>/send")
 @login_required

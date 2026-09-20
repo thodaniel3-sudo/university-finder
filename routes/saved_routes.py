@@ -6,7 +6,7 @@ programmes, and renders them in two sections on /saved.
 """
 
 from flask import Blueprint, render_template
-
+from services.saved_service import list_all_saved_for_emailing
 from services.auth_decorators import current_user, login_required
 from services.external_service import list_external
 from services.matching_service import STATUS_COLORS, STATUS_LABELS, match_programme
@@ -83,3 +83,25 @@ def list_view():
         status_labels=STATUS_LABELS,
         status_colors=STATUS_COLORS,
     )
+
+@saved_bp.route("/saved/programs")
+@login_required
+def programs_view():
+    """
+    Dedicated page for the 'email all saved programmes' workflow.
+
+    Shows every saved programme (DB + web) in one list, sorted so
+    not-yet-emailed items appear first.
+    """
+    user = current_user()
+    try:
+        result = list_all_saved_for_emailing(user["id"], user["access_token"])
+    except Exception:
+        result = {
+            "items": [],
+            "total": 0,
+            "db_count": 0,
+            "external_count": 0,
+            "not_emailed_count": 0,
+        }
+    return render_template("saved_programs.html", result=result)

@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Saved programmes — email workflow{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h1 class="fw-bold mb-0">Programmes to contact</h1>
+            <p class="text-muted mb-0">
+                {{ result.total }} saved
+                {% if result.not_emailed_count %}
+                    · <strong>{{ result.not_emailed_count }} awaiting an email</strong>
+                {% endif %}
+            </p>
+        </div>
+        <a href="{{ url_for('saved.list_view') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Back to saved
+        </a>
+    </div>
+
+    <!-- ===== Filter toggle ===== -->
+    <div class="btn-group mb-4" role="group" aria-label="Filter">
+        <a href="{{ url_for('saved.programs_view', filter='all') }}"
+           class="btn btn-sm {% if not request.args.get('filter') or request.args.get('filter') == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+            All ({{ result.total }})
+        </a>
+        <a href="{{ url_for('saved.programs_view', filter='pending') }}"
+           class="btn btn-sm {% if request.args.get('filter') == 'pending' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+            Awaiting email ({{ result.not_emailed_count }})
+        </a>
+    </div>
+
+    {% if result.items %}
+        {% set show_filter = request.args.get('filter') %}
+        <div class="row g-3">
+            {% for item in result.items %}
+                {% if not show_filter or show_filter == 'all' or (show_filter == 'pending' and not item.already_emailed) %}
+                    <div class="col-12">
+                        <div class="card shadow-sm border-0">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                                    <div>
+                                        <h5 class="fw-bold mb-1">
+                                            {% if item.kind == 'db' %}
+                                                <a href="{{ url_for('programmes.detail_view', programme_id=item.programme_id) }}"
+                                                   class="text-decoration-none">
+                                                    {{ item.programme_name }}
+                                                </a>
+                                            {% else %}
+                                                <a href="{{ url_for('external.detail_view', external_id=item.external_id) }}"
+                                                   class="text-decoration-none">
+                                                    {{ item.programme_name }}
+                                                </a>
+                                            {% endif %}
+
+                                            {% if item.already_emailed %}
+                                                <span class="badge bg-success ms-2">
+                                                    <i class="bi bi-check-circle me-1"></i>Emailed
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark ms-2">
+                                                    Awaiting email
+                                                </span>
+                                            {% endif %}
+                                        </h5>
+
+                                        <p class="text-muted small mb-1">
+                                            <i class="bi bi-building me-1"></i>
+                                            {{ item.university_name or "Unknown" }}
+                                            {% if item.university_country %}
+                                                · {{ item.university_country }}
+                                            {% endif %}
+                                        </p>
+
+                                        <p class="small text-muted mb-0">
+                                            {% if item.kind == 'db' %}
+                                                <span class="badge bg-primary">
+                                                    {{ item.degree_level }}
+                                                </span>
+                                                {% if item.field %}
+                                                    <span class="badge bg-info text-dark">
+                                                        {{ item.field }}
+                                                    </span>
+                                                {% endif %}
+                                                <span class="badge bg-secondary">From our database</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">From the web</span>
+                                                <span class="badge bg-light text-dark border">Unverified</span>
+                                            {% endif %}
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        {% if not item.already_emailed %}
+                                            <a href="{{ item.send_url }}"
+                                               class="btn btn-primary">
+                                                <i class="bi bi-envelope me-1"></i>Send email
+                                            </a>
+                                        {% else %}
+                                            <a href="{{ item.send_url }}"
+                                               class="btn btn-outline-secondary">
+                                                <i class="bi bi-envelope me-1"></i>Send another
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        {% if show_filter == 'pending' and result.not_emailed_count == 0 %}
+            <div class="alert alert-success">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                You've emailed every saved programme.
+            </div>
+        {% endif %}
+
+    {% else %}
+        <div class="card shadow-sm border-0">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-bookmark" style="font-size: 3rem; color: #adb5bd;"></i>
+                <h4 class="fw-bold mt-3">Nothing saved yet</h4>
+                <p class="text-muted">
+                    Save programmes while browsing, or save results from
+                    web search. They'll appear here for one-click emailing.
+                </p>
+                <a href="{{ url_for('universities.list_view') }}" class="btn btn-primary mt-2">
+                    <i class="bi bi-search me-2"></i>Browse universities
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

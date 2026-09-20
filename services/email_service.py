@@ -2,7 +2,7 @@
 Email service — persistence layer.
 
 Phase 15 provides draft/save/list/delete operations.
-Phase 16 will add `send()` which calls the provider (or the mailto handoff).
+Phase 16 adds the mailto handoff flow.
 """
 
 from typing import Any
@@ -18,6 +18,7 @@ ALLOWED_UPDATE_FIELDS = {
     "email_type",
     "attachment_paths",
     "status",
+    "external_programme_id",
 }
 
 
@@ -32,6 +33,7 @@ def create_draft(
     reply_to: str | None = None,
     university_id: int | None = None,
     programme_id: int | None = None,
+    external_programme_id: int | None = None,
     attachment_paths: list[str] | None = None,
 ) -> dict[str, Any]:
     """Insert a new email log row with status='draft'."""
@@ -46,6 +48,7 @@ def create_draft(
         "status": "draft",
         "university_id": university_id,
         "programme_id": programme_id,
+        "external_programme_id": external_programme_id,
         "attachment_paths": attachment_paths or [],
     }
     response = client.table("email_logs").insert(payload).execute()
@@ -129,35 +132,6 @@ def count_by_status(user_id: str, access_token: str) -> dict[str, int]:
 
 
 def mark_handed_off(user_id: str, access_token: str, email_id: int) -> dict[str, Any]:
-    """Mark an email as handed off to the user's email client (Phase 16)."""
-    client = get_user_client(access_token)
-    response = (
-        client.table("email_logs")
-        .update({"status": "handed_off"})
-        .eq("user_id", user_id)
-        .eq("id", email_id)
-        .execute()
-    )
-    return response.data[0] if response.data else {}
-
-
-def mark_sent(user_id: str, access_token: str, email_id: int) -> dict[str, Any]:
-    """Mark an email as confirmed-sent by the user (Phase 16)."""
-    from datetime import datetime, timezone
-    client = get_user_client(access_token)
-    response = (
-        client.table("email_logs")
-        .update({
-            "status": "sent",
-            "sent_at": datetime.now(timezone.utc).isoformat(),
-        })
-        .eq("user_id", user_id)
-        .eq("id", email_id)
-        .execute()
-    )
-    return response.data[0] if response.data else {}
-
-def mark_handed_off(user_id: str, access_token: str, email_id: int) -> dict[str, Any]:
     """Mark an email as handed off to the user's email client."""
     client = get_user_client(access_token)
     response = (
@@ -188,7 +162,7 @@ def mark_sent(user_id: str, access_token: str, email_id: int) -> dict[str, Any]:
 
 
 def mark_failed(user_id: str, access_token: str, email_id: int) -> dict[str, Any]:
-    """Mark an email as not-sent (user reported it didn't work)."""
+    """Mark an email as not sent (user reported it didn't work)."""
     client = get_user_client(access_token)
     response = (
         client.table("email_logs")
