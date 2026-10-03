@@ -287,6 +287,10 @@
 
 
 
+
+
+
+
         <!-- ===== YouTube results ===== -->
         {% if results.youtube_results %}
             <h4 class="fw-bold mb-3 mt-5">
@@ -407,6 +411,64 @@
                 Only results from our database are shown above.
             </div>
         {% endif %}
+
+
+        
+
+        <!-- ===== YouTube results ===== -->
+        {% if results.youtube_results %}
+            <h4 class="fw-bold mb-3 mt-5">
+                <i class="bi bi-youtube me-2 text-danger"></i>
+                From YouTube
+                <span class="text-muted fs-6">({{ results.youtube_results|length }})</span>
+            </h4>
+            <p class="text-muted small mb-3">
+                Videos from official university channels and other creators.
+            </p>
+
+            <div class="row g-3 mb-4">
+                {% for r in results.youtube_results %}
+                    <div class="col-lg-6">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-body d-flex flex-column">
+                                <div class="mb-2">
+                                    <span class="badge bg-danger">YouTube</span>
+                                    {% if r.organization %}
+                                        <span class="badge bg-secondary ms-1">{{ r.organization }}</span>
+                                    {% endif %}
+                                </div>
+                                <h6 class="fw-bold mb-1">{{ r.title }}</h6>
+                                <p class="small text-muted mb-2">
+                                    <i class="bi bi-person-circle me-1"></i>{{ r.organization }}
+                                    {% if r.published_at %}
+                                        · {{ r.published_at[:10] }}
+                                    {% endif %}
+                                </p>
+                                <p class="small mb-3 flex-grow-1">{{ r.description[:220] }}{% if r.description|length > 220 %}…{% endif %}</p>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a href="{{ r.website_url }}" target="_blank" rel="noopener noreferrer"
+                                       class="btn btn-sm btn-danger">
+                                        Watch <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                    </a>
+                                    {% if r.channel_url %}
+                                        <a href="{{ r.channel_url }}" target="_blank" rel="noopener noreferrer"
+                                           class="btn btn-sm btn-outline-secondary">
+                                            Channel
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+
+
+
+
+
                 <!-- ===== From the shared discovery catalog ===== -->
         {% if results.discovery_results %}
             <h4 class="fw-bold mb-3 mt-5">
