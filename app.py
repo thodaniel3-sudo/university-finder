@@ -8,7 +8,7 @@ from datetime import datetime
 
 from flask import Flask, render_template
 from flask_wtf.csrf import CSRFProtect
-
+from routes.discovery_routes import discovery_bp
 from config import Config
 from routes.admin_routes import admin_bp
 from routes.application_routes import application_bp
@@ -38,8 +38,50 @@ def create_app(config_class=Config):
     csrf = CSRFProtect()
     csrf.init_app(app)
 
+    
+    # The discovery save endpoint accepts JSON from the search page.
+    # It is not a session-state-changing form, so it is exempt from CSRF.
+    from routes.discovery_routes import discovery_bp as _discovery_bp
+    csrf.exempt(_discovery_bp)
+
     # Rate limiter — per-route limits are applied via @limiter.limit()
     limiter.init_app(app)
+
+
+
+    # ----- CORS for the Vercel frontend -----
+    # The Vercel site is on a different origin than Render. Without these
+    # headers the browser blocks every API request. We allow only the
+    # origins we control.
+    from flask import request as _request
+
+    ALLOWED_ORIGINS = {
+        "http://localhost:5000",
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5000",
+        "https://university-finder-database.onrender.com",
+        "https://university-finder-frontend.vercel.app",
+    }
+
+    @app.after_request
+    def add_cors_headers(response):
+        origin = _request.headers.get("Origin", "")
+        if origin in ALLOWED_ORIGINS:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = (
+                "Content-Type, X-CSRFToken, Authorization"
+            )
+            response.headers["Vary"] = "Origin"
+        return response
+
+    @app.route("/api/v1/<path:_any>", methods=["OPTIONS"])
+    def api_options(_any):
+        """Preflight requests for the JSON API."""
+        return ("", 204)
+
 
     # ----- Template context processors -----
     @app.context_processor
@@ -63,6 +105,9 @@ def create_app(config_class=Config):
     app.register_blueprint(external_bp)      # /external/*
     app.register_blueprint(search_bp)        # /search
     app.register_blueprint(facebook_bp)      # /facebook/connect, /callback, /status
+    app.register_blueprint(discovery_bp)
+
+
     # ----- Public routes -----
     @app.route("/")
     def index():
