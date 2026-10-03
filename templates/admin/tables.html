@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin · Tables — University Finder</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+          crossorigin="anonymous">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <style>
+        body {
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+            background: #f8f9fa;
+        }
+        .admin-header {
+            background: #0b5ed7;
+            color: #fff;
+            padding: 1rem 0;
+        }
+        .table-selector {
+            max-width: 320px;
+        }
+        .row-count {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .data-table {
+            font-size: 0.875rem;
+        }
+        .data-table th {
+            position: sticky;
+            top: 0;
+            background: #f1f3f5;
+            z-index: 1;
+        }
+        .data-table td {
+            max-width: 320px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .data-table td:hover {
+            white-space: normal;
+            word-break: break-all;
+        }
+        .status-badge {
+            font-size: 0.75rem;
+        }
+        .empty-state {
+            padding: 3rem 1rem;
+            text-align: center;
+            color: #6c757d;
+        }
+        .loading-overlay {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem 1rem;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== Header ===== -->
+<div class="admin-header">
+    <div class="container d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h4 mb-0">
+                <i class="bi bi-table me-2"></i>Admin · Database Tables
+            </h1>
+            <small class="opacity-75">
+                Browse any Supabase table without leaving the app.
+            </small>
+        </div>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-sm btn-light">
+            <i class="bi bi-arrow-left me-1"></i>Back to dashboard
+        </a>
+    </div>
+</div>
+
+<!-- ===== Controls ===== -->
+<div class="container my-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-auto">
+            <label for="table-select" class="form-label mb-1 fw-bold">Choose a table</label>
+            <select id="table-select" class="form-select table-selector">
+                <option value="">— Select a table —</option>
+                <optgroup label="Reference data">
+                    <option value="universities">universities</option>
+                    <option value="programmes">programmes</option>
+                    <option value="admission_requirements">admission_requirements</option>
+                </optgroup>
+                <optgroup label="User data">
+                    <option value="student_profiles">student_profiles</option>
+                    <option value="saved_external_programmes">saved_external_programmes</option>
+                    <option value="saved_programmes">saved_programmes</option>
+                </optgroup>
+                <optgroup label="Crawl & discovery">
+                    <option value="saved_discoveries">saved_discoveries</option>
+                    <option value="programme_requests">programme_requests</option>
+                </optgroup>
+                <optgroup label="Applications & docs">
+                    <option value="applications">applications</option>
+                    <option value="documents">documents</option>
+                    <option value="emails">emails</option>
+                </optgroup>
+                <optgroup label="Other">
+                    <option value="__all__">All known tables (row counts only)</option>
+                </optgroup>
+            </select>
+        </div>
+
+        <div class="col-auto">
+            <label for="limit-input" class="form-label mb-1 fw-bold">Rows to fetch</label>
+            <input type="number" id="limit-input" class="form-control" style="width: 110px;"
+                   value="100" min="1" max="5000" step="50">
+        </div>
+
+        <div class="col-auto">
+            <button id="reload-btn" class="btn btn-primary" disabled>
+                <i class="bi bi-arrow-clockwise me-1"></i>Reload
+            </button>
+        </div>
+
+        <div class="col-auto">
+            <button id="export-btn" class="btn btn-outline-secondary" disabled>
+                <i class="bi bi-download me-1"></i>Export CSV
+            </button>
+        </div>
+    </div>
+
+    <div id="table-meta" class="mt-3"></div>
+</div>
+
+<!-- ===== Output ===== -->
+<div class="container mb-5">
+    <div id="output">
+        <div class="empty-state">
+            <i class="bi bi-arrow-up-circle" style="font-size: 2rem;"></i>
+            <p class="mt-2 mb-0">Select a table above to view its rows.</p>
+        </div>
+    </div>
+</div>
+
+<!-- ===== Config injected by Flask ===== -->
+<script>
+    window.ADMIN_TABLE_CONFIG = {
+        supabaseUrl: "{{ supabase_url|e }}",
+        supabaseAnonKey: "{{ supabase_anon_key|e }}"
+    };
+</script>
+
+<script>
+(function () {
+    "use strict";
+
+    var SUPABASE_URL = (window.ADMIN_TABLE_CONFIG.supabaseUrl || "").replace(/\/$/, "");
+    var ANON_KEY = window.ADMIN_TABLE_CONFIG.supabaseAnonKey || "";
+
+    var tableSelect = document.getElementById("table-select");
+    var limitInput = document.getElementById("limit-input");
+    var reloadBtn = document.getElementById("reload-btn");
+    var exportBtn = document.getElementById("export-btn");
+    var metaBox = document.getElementById("table-meta");
+    var outputBox = document.getElementById("output");
+
+    var lastRows = [];
+    var lastColumns = [];
+    var lastTable = "";
+
+    if (!SUPABASE_URL || !ANON_KEY) {
+        outputBox.innerHTML =
+            '<div class="alert alert-warning">' +
+            '<i class="bi bi-exclamation-triangle me-1"></i>' +
+            'Supabase URL or anon key is not configured on the server. ' +
+            'Check <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> in <code>.env</code>.' +
+            '</div>';
+        return;
+    }
+
+    // --------------------------------------------------------
+    // Helpers
+    // --------------------------------------------------------
+
+    function escapeHtml(s) {
+        return String(s == null ? "" : s)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function isPlainObject(v) {
+        return v !== null && typeof v === "object" && !Array.isArray(v);
+    }
+
+    function renderCell(value) {
+        if (value === null || value === undefined) {
+            return '<span class="text-muted">—</span>';
+        }
+        if (isPlainObject(value) || Array.isArray(value)) {
+            var s = JSON.stringify(value);
+            return '<code class="small">' + escapeHtml(s) + '</code>';
+        }
+        if (typeof value === "boolean") {
+            return value ? '<span class="badge bg-success">true</span>' : '<span class="badge bg-secondary">false</span>';
+        }
+        if (typeof value === "string" && /^https?:\/\//.test(value)) {
+            return '<a href="' + escapeHtml(value) + '" target="_blank" rel="noopener noreferrer">' +
+                   escapeHtml(value) + '</a>';
+        }
+        return escapeHtml(value);
+    }
+
+    function renderTable(rows) {
+        if (!rows || rows.length === 0) {
+            outputBox.innerHTML =
+                '<div class="empty-state">' +
+                '<i class="bi bi-inbox" style="font-size: 2rem;"></i>' +
+                '<p class="mt-2 mb-0">The table is empty (or the SELECT policy returns no rows).</p>' +
+                '</div>';
+            return;
+        }
+
+        // Collect every column across all rows so we do not miss any.
+        var colSet = {};
+        rows.forEach(function (r) {
+            Object.keys(r).forEach(function (k) { colSet[k] = true; });
+        });
+        var columns = Object.keys(colSet);
+        lastColumns = columns;
+
+        var html = '<div class="table-responsive" style="max-height: 70vh; overflow: auto;">';
+        html += '<table class="table table-sm table-striped table-hover data-table align-middle">';
+        html += '<thead><tr><th style="width:40px;">#</th>';
+        columns.forEach(function (c) {
+            html += '<th>' + escapeHtml(c) + '</th>';
+        });
+        html += '</tr></thead><tbody>';
+
+        rows.forEach(function (row, i) {
+            html += '<tr><td class="text-muted small">' + (i + 1) + '</td>';
+            columns.forEach(function (c) {
+                html += '<td>' + renderCell(row[c]) + '</td>';
+            });
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+        outputBox.innerHTML = html;
+    }
+
+    // --------------------------------------------------------
+    // REST calls to Supabase
+    // --------------------------------------------------------
+
+    function fetchTable(tableName, limit) {
+        var url = SUPABASE_URL + "/rest/v1/" + encodeURIComponent(tableName)
+                + "?select=*&limit=" + encodeURIComponent(limit);
+        return fetch(url, {
+            headers: {
+                "apikey": ANON_KEY,
+                "Authorization": "Bearer " + ANON_KEY,
+                "Accept": "application/json"
+            }
+        }).then(function (r) {
+            if (!r.ok) {
+                return r.text().then(function (body) {
+                    throw new Error("HTTP " + r.status + " — " + body.slice(0, 200));
+                });
+            }
+            return r.json();
+        });
+    }
+
+    function fetchCount(tableName) {
+        var url = SUPABASE_URL + "/rest/v1/" + encodeURIComponent(tableName) + "?select=id";
+        return fetch(url, {
+            method: "HEAD",
+            headers: {
+                "apikey": ANON_KEY,
+                "Authorization": "Bearer " + ANON_KEY,
+                "Prefer": "count=exact",
+                "Range": "0-0"
+            }
+        }).then(function (r) {
+            var range = r.headers.get("content-range") || "";
+            var total = range.split("/")[1];
+            return total && total !== "*" ? parseInt(total, 10) : null;
+        }).catch(function () { return null; });
+    }
+
+    // --------------------------------------------------------
+    // Main actions
+    // --------------------------------------------------------
+
+    function loadTable(tableName) {
+        var limit = parseInt(limitInput.value, 10) || 100;
+        if (limit < 1) limit = 100;
+        if (limit > 5000) limit = 5000;
+
+        metaBox.innerHTML = "";
+        outputBox.innerHTML =
+            '<div class="loading-overlay">' +
+            '<div class="spinner-border text-primary me-2" role="status"></div>' +
+            '<span>Loading ' + escapeHtml(tableName) + '…</span>' +
+            '</div>';
+
+        fetchTable(tableName, limit)
+            .then(function (rows) {
+                lastRows = rows;
+                lastTable = tableName;
+
+                metaBox.innerHTML =
+                    '<span class="row-count">' +
+                    '<i class="bi bi-table me-1"></i>' +
+                    'Table <strong>' + escapeHtml(tableName) + '</strong> · ' +
+                    rows.length + ' row' + (rows.length === 1 ? '' : 's') + ' loaded' +
+                    '</span>';
+
+                renderTable(rows);
+                exportBtn.disabled = rows.length === 0;
+            })
+            .catch(function (err) {
+                lastRows = [];
+                exportBtn.disabled = true;
+                outputBox.innerHTML =
+                    '<div class="alert alert-danger">' +
+                    '<i class="bi bi-x-octagon me-1"></i>' +
+                    '<strong>Could not load ' + escapeHtml(tableName) + '.</strong>' +
+                    '<div class="small mt-1">' + escapeHtml(err.message) + '</div>' +
+                    '<div class="small mt-2 text-muted">' +
+                    'Common causes: RLS policy blocks anonymous SELECT, ' +
+                    'or the anon key is wrong, or the table name is misspelled.' +
+                    '</div>' +
+                    '</div>';
+            });
+    }
+
+    function loadAllCounts() {
+        var tables = [
+            "universities", "programmes", "admission_requirements",
+            "student_profiles", "saved_external_programmes", "saved_programmes",
+            "saved_discoveries", "programme_requests",
+            "applications", "documents", "emails"
+        ];
+
+        metaBox.innerHTML = "";
+        outputBox.innerHTML =
+            '<div class="loading-overlay">' +
+            '<div class="spinner-border text-primary me-2" role="status"></div>' +
+            '<span>Counting rows in ' + tables.length + ' tables…</span>' +
+            '</div>';
+
+        Promise.all(tables.map(function (t) {
+            return fetchCount(t).then(function (n) { return { table: t, count: n }; });
+        })).then(function (results) {
+            var html = '<div class="table-responsive">';
+            html += '<table class="table table-sm table-striped data-table">';
+            html += '<thead><tr><th>Table</th><th>Row count</th></tr></thead><tbody>';
+            results.forEach(function (r) {
+                html += '<tr><td>' + escapeHtml(r.table) + '</td>';
+                html += '<td>' + (r.count === null ? '<span class="text-muted">(unknown)</span>' : r.count) + '</td></tr>';
+            });
+            html += '</tbody></table></div>';
+            outputBox.innerHTML = html;
+
+            metaBox.innerHTML =
+                '<span class="row-count">' +
+                '<i class="bi bi-list-ol me-1"></i>' +
+                'Row counts for ' + results.length + ' tables (or "unknown" if the anon key cannot read them).' +
+                '</span>';
+        });
+    }
+
+    function exportCsv() {
+        if (!lastRows || lastRows.length === 0) return;
+
+        var columns = lastColumns.length ? lastColumns : Object.keys(lastRows[0]);
+        var lines = [columns.join(",")];
+
+        lastRows.forEach(function (row) {
+            var line = columns.map(function (c) {
+                var v = row[c];
+                if (v === null || v === undefined) return "";
+                if (isPlainObject(v) || Array.isArray(v)) v = JSON.stringify(v);
+                v = String(v).replace(/"/g, '""');
+                return '"' + v + '"';
+            }).join(",");
+            lines.push(line);
+        });
+
+        var blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = lastTable + "_" + new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-") + ".csv";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    // --------------------------------------------------------
+    // Wire up the controls
+    // --------------------------------------------------------
+
+    tableSelect.addEventListener("change", function () {
+        var t = tableSelect.value;
+        reloadBtn.disabled = !t;
+        exportBtn.disabled = true;
+
+        if (!t) {
+            outputBox.innerHTML =
+                '<div class="empty-state">' +
+                '<i class="bi bi-arrow-up-circle" style="font-size: 2rem;"></i>' +
+                '<p class="mt-2 mb-0">Select a table above to view its rows.</p>' +
+                '</div>';
+            metaBox.innerHTML = "";
+            return;
+        }
+
+        if (t === "__all__") {
+            loadAllCounts();
+            return;
+        }
+
+        loadTable(t);
+    });
+
+    reloadBtn.addEventListener("click", function () {
+        if (tableSelect.value && tableSelect.value !== "__all__") {
+            loadTable(tableSelect.value);
+        }
+    });
+
+    exportBtn.addEventListener("click", exportCsv);
+})();
+</script>
+
+</body>
+</html>
