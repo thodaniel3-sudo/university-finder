@@ -1,61 +1,114 @@
 """
-Search orchestration: database + Brave web + university portals.
+Search orchestration - database + Brave web + university portals +
+Facebook + YouTube + shared discovery catalog.
 
-Brave's free tier caps each request at 20 results. To reach ~100 per source
-we loop through multiple pages of 20, with a small delay between calls.
+ARCHITECTURE:
+  - Supabase DB                : 0 Brave calls
+  - Shared discovery catalog   : 0 Brave calls (grows with user saves)
+  - Brave Web                  : 1-2 Brave calls (broad query)
+  - University portals         : 1-2 Brave calls (site-restricted query)
+  - Facebook                   : 0 Brave calls (OAuth-sourced via session)
+  - YouTube                    : 1 YouTube quota unit (separate quota)
+
+Total Brave cost per cold search: 2-4 requests. Cache hits cost 0.
+YouTube has its own quota: 100 search.list calls/day.
+
+CACHE:
+  In-memory, keyed on the normalized query, TTL 15 minutes.
+  Shared by all Brave-backed sources.
+  YouTube has its own cache inside youtube_service.
 """
 
+import threading
 import time
 from typing import Any
 from urllib.parse import urlparse
 
+from services.discovery_service import search_discoveries
 from services.supabase_service import get_public_client
 from services.web_search_service import is_web_search_available, search_web
+from services.university_portal_service import search_university_portals
+from services.youtube_service import search_youtube
 
 
 DEFAULT_PER_PAGE = 20
-BRAVE_PAGE_SIZE = 20      # free tier hard cap
-BRAVE_MAX_PAGES = 5       # 5 x 20 = up to 100 results per source
-BRAVE_DELAY_S = 1.2       # stay under the 1 req/sec limit
+BRAVE_PAGE_SIZE = 20
+BRAVE_DELAY_S = 1.2
+SECOND_CALL_THRESHOLD = 8
+
+_CACHE_TTL_S = 900
+_CACHE: dict[str, tuple[float, dict]] = {}
+_CACHE_LOCK = threading.Lock()
+
+_LAST_BRAVE_CALL = [0.0]
+_BRAVE_LOCK = threading.Lock()
 
 
 # ============================================================
-# Brave paginated fetch
+# Cache helpers
 # ============================================================
 
-def _brave_fetch_all(query: str, max_pages: int = BRAVE_MAX_PAGES) -> list[dict]:
-    """
-    Fetch up to max_pages * BRAVE_PAGE_SIZE results from Brave,
-    one page at a time. Stops early if a page returns fewer than
-    BRAVE_PAGE_SIZE results (means we exhausted the index).
+def _cache_key(query: str) -> str:
+    return (query or "").strip().lower()
 
-    Every request uses count=BRAVE_PAGE_SIZE (20) so the free tier
-    never rejects it.
-    """
-    all_results: list[dict] = []
-    for page_index in range(max_pages):
-        offset = page_index * BRAVE_PAGE_SIZE
-        if offset >= 200:
-            break
 
-        page = search_web(
-            query,
-            count=BRAVE_PAGE_SIZE,
-            offset=offset,
-        )
-        if not page:
-            break
+def _cache_get(key: str) -> dict | None:
+    with _CACHE_LOCK:
+        entry = _CACHE.get(key)
+        if not entry:
+            return None
+        expires_at, payload = entry
+        if expires_at < time.time():
+            _CACHE.pop(key, None)
+            return None
+        return payload
 
-        all_results.extend(page)
 
-        if len(page) < BRAVE_PAGE_SIZE:
-            # Brave returned fewer than requested → no more results.
-            break
+def _cache_put(key: str, payload: dict) -> None:
+    with _CACHE_LOCK:
+        _CACHE[key] = (time.time() + _CACHE_TTL_S, payload)
+        if len(_CACHE) > 200:
+            now = time.time()
+            for k in list(_CACHE.keys()):
+                if _CACHE[k][0] < now:
+                    _CACHE.pop(k, None)
 
-        # Be polite: stay under the 1 request/second rate limit.
-        time.sleep(BRAVE_DELAY_S)
 
-    return all_results
+# ============================================================
+# Rate-limited Brave wrapper
+# ============================================================
+
+def _brave_call(query: str, count: int = BRAVE_PAGE_SIZE) -> list[dict]:
+    if not is_web_search_available():
+        return []
+
+    with _BRAVE_LOCK:
+        now = time.time()
+        elapsed = now - _LAST_BRAVE_CALL[0]
+        if elapsed < BRAVE_DELAY_S:
+            time.sleep(BRAVE_DELAY_S - elapsed)
+        _LAST_BRAVE_CALL[0] = time.time()
+
+    count = max(1, min(int(count), BRAVE_PAGE_SIZE))
+    return search_web(query, count=count, offset=0)
+
+
+def _brave_fetch_web(query: str) -> list[dict]:
+    """Fetch web results. Secondary call only if primary was thin."""
+    primary = _brave_call(query, count=BRAVE_PAGE_SIZE)
+    if len(primary) >= SECOND_CALL_THRESHOLD:
+        return primary
+
+    secondary = _brave_call(
+        f"{query} master programme university",
+        count=BRAVE_PAGE_SIZE,
+    )
+    seen = {r.get("url") for r in primary}
+    for r in secondary:
+        if r.get("url") not in seen:
+            primary.append(r)
+            seen.add(r.get("url"))
+    return primary
 
 
 # ============================================================
@@ -127,18 +180,8 @@ def _search_db_universities(query: str, limit: int, offset: int) -> tuple[list[d
 
 
 # ============================================================
-# University portal search
+# University domain filter
 # ============================================================
-
-_UNIVERSITY_DOMAIN_HINTS = (
-    ".edu",
-    ".ac.uk",
-    ".ac.jp",
-    ".edu.au",
-    ".edu.cn",
-    ".uni-",
-)
-
 
 def _is_university_domain(url: str) -> bool:
     try:
@@ -158,30 +201,51 @@ def _is_university_domain(url: str) -> bool:
     return False
 
 
-def _search_university_portals(query: str) -> list[dict]:
-    """
-    Use Brave (paginated) to find official university pages about the query.
-    """
-    if not is_web_search_available():
-        return []
+# ============================================================
+# Facebook source (session-scoped, no Brave cost)
+# ============================================================
 
-    portal_query = f"{query} site:edu OR site:ac.uk OR university programme admissions"
-    raw = _brave_fetch_all(portal_query)
+def _facebook_results_if_connected(query: str) -> dict:
+    """
+    Read the current user's Facebook session and, if connected, fetch
+    recent posts from the Pages they administer, filtered by the query.
+    """
+    try:
+        from flask import session as flask_session
+        from services.facebook_service import search_facebook
 
-    out: list[dict] = []
-    for r in raw:
-        url = r.get("url") or ""
-        out.append({
-            "title": r.get("title") or "",
-            "url": url,
-            "description": r.get("description") or "",
-            "source": r.get("source") or "",
-            "source_type": (
-                "university_official" if _is_university_domain(url)
-                else "university_web"
-            ),
-        })
-    return out
+        user_token = flask_session.get("facebook_user_token")
+        pages = flask_session.get("facebook_pages") or []
+
+        if not user_token:
+            return {"connected": False, "pages_count": 0, "results": []}
+
+        raw = search_facebook(
+            user_token=user_token,
+            query=query,
+            max_pages=10,
+            posts_per_page=25,
+        )
+
+        normalized = []
+        for r in raw:
+            normalized.append({
+                "title": r.get("title") or "",
+                "organization": r.get("organization") or r.get("page_name") or "",
+                "description": r.get("description") or r.get("message") or "",
+                "source_url": r.get("source_url") or r.get("permalink_url") or "",
+                "source_type": "facebook",
+                "published_at": r.get("created_time") or "",
+                "page_name": r.get("page_name") or "",
+            })
+
+        return {
+            "connected": True,
+            "pages_count": len(pages),
+            "results": normalized,
+        }
+    except Exception:
+        return {"connected": False, "pages_count": 0, "results": []}
 
 
 # ============================================================
@@ -198,26 +262,39 @@ def search_everything(
     offset = (page - 1) * per_page
     web_available = is_web_search_available()
 
-    if not query:
-        return {
-            "query": "",
-            "db_programmes": [],
-            "db_universities": [],
-            "db_total": 0,
-            "db_programme_total": 0,
-            "db_university_total": 0,
-            "db_page": 1,
-            "db_per_page": per_page,
-            "db_total_pages": 1,
-            "web_results": [],
-            "web_available": web_available,
-            "web_offset": 0,
-            "has_more_web": False,
-            "university_results": [],
-            "university_available": web_available,
-        }
+    empty = {
+        "query": "",
+        "db_programmes": [],
+        "db_universities": [],
+        "db_total": 0,
+        "db_programme_total": 0,
+        "db_university_total": 0,
+        "db_page": 1,
+        "db_per_page": per_page,
+        "db_total_pages": 1,
+        "web_results": [],
+        "web_available": web_available,
+        "web_offset": 0,
+        "has_more_web": False,
+        "university_results": [],
+        "university_available": web_available,
+        "facebook_connected": False,
+        "facebook_pages_count": 0,
+        "facebook_results": [],
+        "youtube_results": [],
+        "discovery_results": [],
+    }
 
-    # ---- DB ----
+    if not query:
+        return empty
+
+    # ---- Shared discovery catalog (free, grows with user saves) ----
+    try:
+        discovery_results = search_discoveries(query, limit=20)
+    except Exception:
+        discovery_results = []
+
+    # ---- Database (always free) ----
     db_programmes, prog_total = _search_db_programmes(query, per_page, offset)
     db_universities, uni_total = _search_db_universities(query, per_page, offset)
 
@@ -225,19 +302,40 @@ def search_everything(
     max_per_set = max(prog_total, uni_total)
     db_total_pages = max(1, (max_per_set + per_page - 1) // per_page)
 
-    # ---- Web (Brave, paginated) ----
-    web_results: list[dict] = []
-    has_more_web = False
+    # ---- Brave-backed sources (cache first) ----
+    cache_key = _cache_key(query)
+    cached = _cache_get(cache_key)
 
-    if web_available and page == 1:
-        web_query = f"{query} master programme university"
-        web_results = _brave_fetch_all(web_query)
-        has_more_web = len(web_results) >= (BRAVE_PAGE_SIZE * BRAVE_MAX_PAGES)
+    if cached is not None:
+        web_results = cached["web_results"]
+        university_results = cached["university_results"]
+    elif not web_available:
+        web_results = []
+        university_results = []
+    else:
+        raw_web = _brave_fetch_web(query)
+        web_results = [
+            {
+                "title": r.get("title") or "",
+                "url": r.get("url") or "",
+                "description": r.get("description") or "",
+                "source": r.get("source") or "",
+            }
+            for r in raw_web
+            if not _is_university_domain(r.get("url") or "")
+        ]
+        university_results = search_university_portals(query)
 
-    # ---- University portals (Brave, paginated) ----
-    university_results: list[dict] = []
-    if web_available and page == 1:
-        university_results = _search_university_portals(query)
+        _cache_put(cache_key, {
+            "web_results": web_results,
+            "university_results": university_results,
+        })
+
+    # ---- Facebook (session-scoped, always fresh, no cache) ----
+    fb = _facebook_results_if_connected(query)
+
+    # ---- YouTube (separate quota; cached inside youtube_service) ----
+    youtube_results = search_youtube(query) if query else []
 
     return {
         "query": query,
@@ -252,7 +350,12 @@ def search_everything(
         "web_results": web_results,
         "web_available": web_available,
         "web_offset": offset,
-        "has_more_web": has_more_web,
+        "has_more_web": False,
         "university_results": university_results,
         "university_available": web_available,
+        "facebook_connected": fb["connected"],
+        "facebook_pages_count": fb["pages_count"],
+        "facebook_results": fb["results"],
+        "youtube_results": youtube_results,
+        "discovery_results": discovery_results,
     }

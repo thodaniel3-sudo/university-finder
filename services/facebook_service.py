@@ -1,12 +1,12 @@
 """
-Meta / Facebook source service.
+Meta/Facebook source service.
 
 Scope (officially supported by Meta Graph API):
   - OAuth 2.0 authentication (no passwords ever touch this app)
   - Read Pages the authenticating user administers
   - Read posts from those Pages
 
-NOT supported by Meta's official API:
+NOT supported by Meta's official API (do not attempt):
   - Keyword search across all Facebook posts
   - Searching arbitrary public Pages by name
   - Reading posts from Pages the user does not administer
@@ -42,8 +42,8 @@ GRAPH_API_VERSION = "v21.0"
 GRAPH_BASE = f"https://graph.facebook.com/{GRAPH_API_VERSION}"
 OAUTH_DIALOG_BASE = f"https://www.facebook.com/{GRAPH_API_VERSION}/dialog/oauth"
 
-# Permissions requested. Both are Standard Access for the user's own
-# Pages. No App Review required.
+# Permissions we request. Both are Standard Access for the user's own
+# Pages — no App Review required.
 OAUTH_SCOPES = [
     "public_profile",
     "pages_show_list",
@@ -108,7 +108,18 @@ def build_oauth_url(state: str | None = None) -> str:
 # ============================================================
 
 def exchange_code_for_user_token(code: str) -> dict[str, Any]:
-    """Exchange the OAuth callback code for a short-lived user token."""
+    """
+    Exchange the OAuth callback `code` for a short-lived user access token.
+
+    Returns a dict:
+        {
+          "access_token": str,
+          "token_type": str,
+          "expires_in": int,
+        }
+
+    Raises RuntimeError on failure.
+    """
     if not is_facebook_configured():
         raise RuntimeError("Facebook is not configured.")
 
@@ -145,7 +156,11 @@ def exchange_code_for_user_token(code: str) -> dict[str, Any]:
 # ============================================================
 
 def exchange_for_long_lived_user_token(short_token: str) -> dict[str, Any]:
-    """Exchange a short-lived user token (~2h) for a long-lived one (~60d)."""
+    """
+    Exchange a short-lived user token (~2h) for a long-lived one (~60d).
+
+    Returns the same shape as exchange_code_for_user_token.
+    """
     if not is_facebook_configured():
         raise RuntimeError("Facebook is not configured.")
 
@@ -179,7 +194,17 @@ def exchange_for_long_lived_user_token(short_token: str) -> dict[str, Any]:
 # ============================================================
 
 def fetch_user_pages(user_token: str) -> list[dict[str, Any]]:
-    """Return a list of Pages the user administers."""
+    """
+    Return a list of Pages the user administers.
+
+    Each item:
+        {
+          "id": str,
+          "name": str,
+          "access_token": str,   # Page token, does not expire
+          "category": str,
+        }
+    """
     url = f"{GRAPH_BASE}/me/accounts"
     params = {
         "access_token": user_token,
@@ -218,8 +243,24 @@ def fetch_user_pages(user_token: str) -> list[dict[str, Any]]:
 # Page posts
 # ============================================================
 
-def fetch_page_posts(page_id: str, page_token: str, limit: int = 25) -> list[dict[str, Any]]:
-    """Return recent posts from a single Page."""
+def fetch_page_posts(
+    page_id: str,
+    page_token: str,
+    limit: int = 25,
+) -> list[dict[str, Any]]:
+    """
+    Return recent posts from a single Page.
+
+    Each item (normalized):
+        {
+          "id": str,
+          "message": str,
+          "created_time": str,   # ISO 8601
+          "permalink_url": str,
+          "source_url": str,     # same as permalink_url
+          "source_type": "facebook",
+        }
+    """
     url = f"{GRAPH_BASE}/{page_id}/posts"
     params = {
         "access_token": page_token,
@@ -257,17 +298,23 @@ def fetch_page_posts(page_id: str, page_token: str, limit: int = 25) -> list[dic
 
 
 # ============================================================
-# Top-level entry point
+# Top-level entry point used by the search orchestrator
 # ============================================================
 
-def search_facebook(user_token: str, query: str, max_pages: int = 5,
-                    posts_per_page: int = 25) -> list[dict[str, Any]]:
+def search_facebook(
+    user_token: str,
+    query: str,
+    max_pages: int = 5,
+    posts_per_page: int = 25,
+) -> list[dict[str, Any]]:
     """
-    Fetch recent posts from the Pages the user administers and filter
-    them client-side by the query terms.
+    Search across the Pages the user administers.
 
-    This is the only officially supported behavior. It does NOT do
-    keyword search across Facebook.
+    NOTE: This does NOT do keyword search on Facebook. It fetches recent
+    posts from the user's Pages and filters them client-side by the
+    query terms. This is the only officially supported behavior.
+
+    Returns a list of normalized results with source_type='facebook'.
     """
     if not user_token:
         return []
@@ -284,6 +331,7 @@ def search_facebook(user_token: str, query: str, max_pages: int = 5,
         )
         for post in posts:
             message = (post.get("message") or "").lower()
+            # Client-side keyword filter.
             if query_terms and not any(t in message for t in query_terms):
                 continue
             results.append({

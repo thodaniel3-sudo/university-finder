@@ -16,7 +16,8 @@ from flask import (
     request,
     url_for,
 )
-
+from flask import render_template, current_app, abort
+from services.auth_decorators import current_user, login_required
 from services.admin_decorators import admin_required
 from services.admin_service import (
     create_programme,
@@ -400,3 +401,21 @@ def _example_row(import_type: str, columns: list[str]) -> list[str]:
     }
     example = examples.get(import_type, {})
     return [example.get(c, "") for c in columns]
+
+@admin_bp.route("/tables")
+@login_required
+def tables_view():
+    """
+    Admin-only page that lets the admin browse any Supabase table
+    from the browser, without opening the Supabase dashboard.
+    """
+    user = current_user()
+    # Only real admins may see this page.
+    if not user or not user.get("is_admin"):
+        abort(403)
+
+    return render_template(
+        "admin/tables.html",
+        supabase_url=current_app.config.get("SUPABASE_URL", ""),
+        supabase_anon_key=current_app.config.get("SUPABASE_ANON_KEY", ""),
+    )

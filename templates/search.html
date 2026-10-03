@@ -1,5 +1,3 @@
-
-
 {% extends "base.html" %}
 
 {% block title %}
@@ -157,7 +155,11 @@
             </nav>
         {% endif %}
 
-        <!-- ===== NEW: University portals ===== -->
+
+
+
+
+        <!-- ===== University portals ===== -->
         {% if results.university_results %}
             <h4 class="fw-bold mb-3 mt-5">
                 <i class="bi bi-mortarboard me-2 text-warning"></i>
@@ -165,9 +167,8 @@
                 <span class="text-muted fs-6">({{ results.university_results|length }})</span>
             </h4>
             <p class="text-muted small mb-3">
-                Direct links to official university pages found on the web.
-                Domains ending in <code>.edu</code>, <code>.ac.uk</code>, <code>.uni-*</code>
-                are labelled <span class="badge bg-warning text-dark">University official</span>.
+                Direct links to official university pages about programmes,
+                admissions, scholarships, and tuition.
             </p>
 
             <div class="row g-3 mb-4">
@@ -176,10 +177,9 @@
                         <div class="card shadow-sm border-0 h-100">
                             <div class="card-body d-flex flex-column">
                                 <div class="mb-2">
-                                    {% if r.source_type == "university_official" %}
-                                        <span class="badge bg-warning text-dark">University official</span>
-                                    {% else %}
-                                        <span class="badge bg-secondary">University web</span>
+                                    <span class="badge bg-warning text-dark">University official</span>
+                                    {% if r.page_type and r.page_type != "other" %}
+                                        <span class="badge bg-info text-dark ms-1">{{ r.page_type|capitalize }}</span>
                                     {% endif %}
                                 </div>
                                 <h6 class="fw-bold mb-1">{{ r.title }}</h6>
@@ -187,11 +187,39 @@
                                     <i class="bi bi-globe me-1"></i>{{ r.source }}
                                 </p>
                                 <p class="small mb-3 flex-grow-1">{{ r.description }}</p>
+
                                 <div class="d-flex flex-wrap gap-2">
                                     <a href="{{ r.url }}" target="_blank" rel="noopener noreferrer"
                                        class="btn btn-sm btn-outline-primary">
                                         Visit page <i class="bi bi-box-arrow-up-right ms-1"></i>
                                     </a>
+
+                                    {% if r.source %}
+                                        <a href="https://search.brave.com/search?q=site%3A{{ r.source|urlencode }}+admissions+email"
+                                           target="_blank" rel="noopener noreferrer"
+                                           class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-envelope me-1"></i>Find email
+                                        </a>
+                                    {% endif %}
+
+                                    {% if current_user %}
+                                        <form method="post" action="{{ url_for('external.save_view') }}" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="title" value="{{ r.title }}">
+                                            <input type="hidden" name="url" value="{{ r.url }}">
+                                            <input type="hidden" name="source_domain" value="{{ r.source }}">
+                                            <input type="hidden" name="description" value="{{ r.description }}">
+                                            <input type="hidden" name="search_query" value="{{ query }}">
+                                            <button type="submit" class="btn btn-sm btn-primary">
+                                                <i class="bi bi-bookmark-plus me-1"></i>Save
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <a href="{{ url_for('auth.login') }}?next={{ request.full_path|urlencode }}"
+                                           class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-bookmark-plus me-1"></i>Log in to save
+                                        </a>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -199,6 +227,118 @@
                 {% endfor %}
             </div>
         {% endif %}
+
+        <!-- ===== Facebook results ===== -->
+        {% if results.facebook_connected %}
+            <h4 class="fw-bold mb-3 mt-5">
+                <i class="bi bi-facebook me-2 text-primary"></i>
+                From your Facebook Pages
+                <span class="text-muted fs-6">({{ results.facebook_results|length }})</span>
+            </h4>
+
+            {% if results.facebook_results %}
+                <p class="text-muted small mb-3">
+                    Recent posts from {{ results.facebook_pages_count }}
+                    {% if results.facebook_pages_count == 1 %}Page{% else %}Pages{% endif %}
+                    that match your search.
+                </p>
+                <div class="row g-3 mb-4">
+                    {% for r in results.facebook_results %}
+                        <div class="col-lg-6">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-body d-flex flex-column">
+                                    <div class="mb-2">
+                                        <span class="badge bg-primary">Facebook</span>
+                                        {% if r.organization %}
+                                            <span class="badge bg-secondary ms-1">{{ r.organization }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <h6 class="fw-bold mb-1">{{ r.title or "(no title)" }}</h6>
+                                    {% if r.published_at %}
+                                        <p class="small text-muted mb-2">
+                                            <i class="bi bi-calendar-event me-1"></i>{{ r.published_at }}
+                                        </p>
+                                    {% endif %}
+                                    <p class="small mb-3 flex-grow-1">{{ r.description }}</p>
+                                    {% if r.source_url %}
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <a href="{{ r.source_url }}" target="_blank" rel="noopener noreferrer"
+                                               class="btn btn-sm btn-outline-primary">
+                                                View on Facebook <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                            </a>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-secondary">
+                    <i class="bi bi-info-circle me-1"></i>
+                    No recent posts on your Facebook Pages match this query.
+                    {% if results.facebook_pages_count == 0 %}
+                        Your account does not currently administer any Pages.
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% endif %}
+        
+
+
+
+        <!-- ===== YouTube results ===== -->
+        {% if results.youtube_results %}
+            <h4 class="fw-bold mb-3 mt-5">
+                <i class="bi bi-youtube me-2 text-danger"></i>
+                From YouTube
+                <span class="text-muted fs-6">({{ results.youtube_results|length }})</span>
+            </h4>
+            <p class="text-muted small mb-3">
+                Videos from official university channels and other creators.
+            </p>
+
+            <div class="row g-3 mb-4">
+                {% for r in results.youtube_results %}
+                    <div class="col-lg-6">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-body d-flex flex-column">
+                                <div class="mb-2">
+                                    <span class="badge bg-danger">YouTube</span>
+                                    {% if r.organization %}
+                                        <span class="badge bg-secondary ms-1">{{ r.organization }}</span>
+                                    {% endif %}
+                                </div>
+                                <h6 class="fw-bold mb-1">{{ r.title }}</h6>
+                                <p class="small text-muted mb-2">
+                                    <i class="bi bi-person-circle me-1"></i>{{ r.organization }}
+                                    {% if r.published_at %}
+                                        · {{ r.published_at[:10] }}
+                                    {% endif %}
+                                </p>
+                                <p class="small mb-3 flex-grow-1">{{ r.description[:220] }}{% if r.description|length > 220 %}…{% endif %}</p>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a href="{{ r.website_url }}" target="_blank" rel="noopener noreferrer"
+                                       class="btn btn-sm btn-danger">
+                                        Watch <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                    </a>
+                                    {% if r.channel_url %}
+                                        <a href="{{ r.channel_url }}" target="_blank" rel="noopener noreferrer"
+                                           class="btn btn-sm btn-outline-secondary">
+                                            Channel
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+
+
+
 
         <!-- ===== Web section ===== -->
         {% if results.web_results %}
@@ -267,6 +407,56 @@
                 Only results from our database are shown above.
             </div>
         {% endif %}
+                <!-- ===== From the shared discovery catalog ===== -->
+        {% if results.discovery_results %}
+            <h4 class="fw-bold mb-3 mt-5">
+                <i class="bi bi-stars me-2 text-success"></i>
+                From our growing catalog
+                <span class="text-muted fs-6">({{ results.discovery_results|length }})</span>
+            </h4>
+            <p class="text-muted small mb-3">
+                Pages other users have saved. Free to read — no external calls.
+            </p>
+
+            <div class="row g-3 mb-4">
+                {% for r in results.discovery_results %}
+                    <div class="col-lg-6">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-body d-flex flex-column">
+                                <div class="mb-2">
+                                    <span class="badge bg-success">Catalog</span>
+                                    {% if r.source_type %}
+                                        <span class="badge bg-secondary ms-1">{{ r.source_type }}</span>
+                                    {% endif %}
+                                    {% if r.verified %}
+                                        <span class="badge bg-info text-dark ms-1">Verified</span>
+                                    {% endif %}
+                                </div>
+                                <h6 class="fw-bold mb-1">{{ r.title }}</h6>
+                                {% if r.organization or r.source %}
+                                    <p class="small text-muted mb-2">
+                                        {% if r.organization %}
+                                            <i class="bi bi-building me-1"></i>{{ r.organization }}
+                                        {% endif %}
+                                        {% if r.source %}
+                                            · <i class="bi bi-globe me-1"></i>{{ r.source }}
+                                        {% endif %}
+                                    </p>
+                                {% endif %}
+                                <p class="small mb-3 flex-grow-1">{{ r.description[:220] }}{% if r.description|length > 220 %}…{% endif %}</p>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a href="{{ r.website_url }}" target="_blank" rel="noopener noreferrer"
+                                       class="btn btn-sm btn-outline-primary">
+                                        Visit page <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
 
         <!-- ===== Request a programme ===== -->
         <div class="card shadow-sm border-0 mt-4">
@@ -328,4 +518,5 @@
 
 {% block body_extra %}
 <script src="{{ url_for('static', filename='js/facebook_status.js') }}"></script>
+<script src="{{ url_for('static', filename='js/discovery_save.js') }}"></script>
 {% endblock %}

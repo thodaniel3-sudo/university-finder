@@ -41,13 +41,16 @@ class Config:
     # Web search (Brave Search API)
     BRAVE_SEARCH_API_KEY = _env("BRAVE_SEARCH_API_KEY")
 
-
+    # YouTube Data API v3
+    YOUTUBE_API_KEY = _env("YOUTUBE_API_KEY")
     
     # Meta / Facebook OAuth
     META_APP_ID = _env("META_APP_ID")
     META_APP_SECRET = _env("META_APP_SECRET")
     META_REDIRECT_URI = _env("META_REDIRECT_URI", "http://localhost:5000/facebook/callback")
 
+    # YouTube Data API v3
+    YOUTUBE_API_KEY = _env("YOUTUBE_API_KEY")
     # Email
     EMAIL_PROVIDER = _env("EMAIL_PROVIDER", "resend")
     EMAIL_API_KEY = _env("EMAIL_API_KEY")

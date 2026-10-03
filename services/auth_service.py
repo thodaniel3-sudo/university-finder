@@ -1,10 +1,12 @@
-
-
 """
 Authentication service.
 
 Wraps Supabase Auth so the rest of the app never talks to the auth API
-directly. Uses the PUBLIC (anon) client — never the service_role client.
+directly. If we ever swap providers, only this file changes.
+
+IMPORTANT: This service uses the PUBLIC (anon) client, never the
+service_role client. Supabase Auth is designed to be called with the
+anon key - the anon key is safe because it cannot bypass RLS.
 """
 
 from typing import Any
@@ -17,6 +19,12 @@ class AuthError(Exception):
 
 
 def register_user(email: str, password: str) -> dict[str, Any]:
+    """
+    Create a new user in Supabase Auth.
+
+    Returns the user dict on success.
+    Raises AuthError with a user-friendly message on failure.
+    """
     client = get_public_client()
     try:
         response = client.auth.sign_up({"email": email, "password": password})
@@ -36,6 +44,12 @@ def register_user(email: str, password: str) -> dict[str, Any]:
 
 
 def authenticate_user(email: str, password: str) -> dict[str, Any]:
+    """
+    Log in an existing user.
+
+    Returns a dict with user info and session tokens.
+    Raises AuthError on failure.
+    """
     client = get_public_client()
     try:
         response = client.auth.sign_in_with_password(
@@ -60,6 +74,11 @@ def authenticate_user(email: str, password: str) -> dict[str, Any]:
 
 
 def sign_out_user(access_token: str) -> None:
+    """
+    Revoke a Supabase session server-side.
+
+    Best-effort - if it fails we still clear the local Flask session.
+    """
     client = get_public_client()
     try:
         client.auth.sign_out()
@@ -68,6 +87,18 @@ def sign_out_user(access_token: str) -> None:
 
 
 def refresh_session(refresh_token: str) -> dict[str, Any]:
+    """
+    Exchange a refresh token for a new access token.
+
+    Returns:
+        {
+            "access_token": str,
+            "refresh_token": str,
+            "expires_at": int,   # unix timestamp
+        }
+
+    Raises AuthError if the refresh token itself is expired or revoked.
+    """
     client = get_public_client()
     try:
         response = client.auth.refresh_session(refresh_token)
