@@ -37,3 +37,4 @@ htmlcov/
 *.tmp
 brave_response.json
 check_*.py
+MWCNT_Characterization.zip

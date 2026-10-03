@@ -16,6 +16,7 @@ from routes.auth_routes import auth_bp
 from routes.document_routes import document_bp
 from routes.email_routes import email_bp
 from routes.external_routes import external_bp
+from routes.facebook_routes import facebook_bp
 from routes.profile_routes import profile_bp
 from routes.programme_routes import programme_bp
 from routes.saved_routes import saved_bp
@@ -61,7 +62,7 @@ def create_app(config_class=Config):
     app.register_blueprint(email_bp)         # /emails
     app.register_blueprint(external_bp)      # /external/*
     app.register_blueprint(search_bp)        # /search
-
+    app.register_blueprint(facebook_bp)      # /facebook/connect, /callback, /status
     # ----- Public routes -----
     @app.route("/")
     def index():
