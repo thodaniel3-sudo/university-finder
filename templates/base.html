@@ -21,6 +21,43 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
     {% block head_extra %}{% endblock %}
+    <meta name="description"
+          content="{% block meta_description %}Discover universities, master's programmes, PhD opportunities, and scholarships worldwide. Search, match, and apply — all in one place.{% endblock %}">
+
+    <link rel="canonical"
+          href="{% block canonical %}{{ request.url }}{% endblock %}">
+
+    <meta name="robots"
+          content="{% block robots %}index, follow{% endblock %}">
+
+    <!-- Open Graph -->
+    <meta property="og:site_name" content="University Finder">
+    <meta property="og:title"
+          content="{% block og_title %}{{ self.title() }}{% endblock %}">
+    <meta property="og:description"
+          content="{% block og_description %}Discover universities, programmes, and scholarships worldwide.{% endblock %}">
+    <meta property="og:url" content="{{ request.url }}">
+    <meta property="og:type" content="website">
+    <meta property="og:image"
+          content="{{ url_for('static', filename='img/og-default.png', _external=True) }}">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ self.title() }}">
+    <meta name="twitter:description"
+          content="Discover universities, programmes, and scholarships worldwide.">
+
+    <!-- Structured data: Organization (site-wide) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "University Finder",
+      "url": "https://university-finder.me",
+      "logo": "{{ url_for('static', filename='img/logo.png', _external=True) }}",
+      "description": "Discover universities, programmes, and scholarships worldwide."
+    }
+    </script>
 </head>
 <body>
 

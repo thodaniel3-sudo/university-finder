@@ -1,0 +1,31 @@
+﻿User-agent: *
+Allow: /
+
+# --- Do not index search-result pages (thin/duplicate content)
+Disallow: /search
+Disallow: /search?
+Disallow: /extra/
+Disallow: /reddit/
+Disallow: /aggregated/
+Disallow: /apify/
+
+# --- Do not index authenticated / private pages
+Disallow: /login
+Disallow: /register
+Disallow: /logout
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /applications
+Disallow: /documents
+Disallow: /emails
+Disallow: /saved
+Disallow: /admin
+Disallow: /facebook/
+
+# --- Block generic crawl of API and static assets we don't want indexed
+Disallow: /api/
+Disallow: /static/js/
+Disallow: /static/css/
+
+# --- Sitemap
+Sitemap: https://university-finder.me/sitemap.xml

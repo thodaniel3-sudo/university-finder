@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+    {# --- Homepage --- #}
+    <url>
+        <loc>{{ url_for('index', _external=True) }}</loc>
+        <changefreq>weekly</changefreq>
+        <priority>1.0</priority>
+    </url>
+
+    {# --- About page --- #}
+    <url>
+        <loc>{{ url_for('about', _external=True) }}</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.5</priority>
+    </url>
+
+    {# --- Universities index --- #}
+    <url>
+        <loc>{{ url_for('universities.list_view', _external=True) }}</loc>
+        <changefreq>daily</changefreq>
+        <priority>0.9</priority>
+    </url>
+
+    {# --- Each university detail page --- #}
+    {% for u in universities %}
+    <url>
+        <loc>{{ url_for('universities.detail_view', university_id=u.id, _external=True) }}</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    {% endfor %}
+
+    {# --- Each programme detail page --- #}
+    {% for p in programmes %}
+    <url>
+        <loc>{{ url_for('programmes.detail_view', programme_id=p.id, _external=True) }}</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    {% endfor %}
+
+</urlset>

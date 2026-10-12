@@ -24,6 +24,7 @@ from routes.reddit_routes import reddit_bp
 from routes.aggregated_sources_routes import aggregated_bp
 from routes.apify_sources_routes import apify_bp
 from routes.extra_sources_routes import extra_bp
+from routes.sitemap_routes import sitemap_bp
 
 from services.auth_decorators import current_user
 from services.rate_limit import limiter
@@ -115,6 +116,7 @@ def create_app(config_class=Config):
     app.register_blueprint(aggregated_bp)
     app.register_blueprint(apify_bp)
     app.register_blueprint(extra_bp)
+    app.register_blueprint(sitemap_bp)       # /sitemap.xml
 
     # ----- Public routes -----
     @app.route("/")
