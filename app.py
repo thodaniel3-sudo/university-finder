@@ -127,6 +127,22 @@ def create_app(config_class=Config):
     def about():
         return render_template("about.html")
 
+    # ----- SEO files at the root -----
+    # Flask's default static folder serves files under /static/*, not at
+    # the root. Search engines expect /robots.txt at the root, so we add
+    # an explicit route to serve it from static/robots.txt.
+    # NOTE: /sitemap.xml is NOT re-routed here — it is already served by
+    # sitemap_bp. Adding another route for it would cause a redirect loop.
+    from flask import send_from_directory
+
+    @app.route("/robots.txt")
+    def robots_txt():
+        return send_from_directory(
+            app.static_folder,
+            "robots.txt",
+            mimetype="text/plain",
+        )
+
     # ----- Error handlers -----
     @app.errorhandler(404)
     def not_found(error):
