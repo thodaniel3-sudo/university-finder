@@ -57,7 +57,7 @@ def create_app(config_class=Config):
     limiter.init_app(app)
 
     # ----- CORS for the Vercel frontend -----
-    from flask import request as _request, redirect as _redirect
+    from flask import request as _request
 
     ALLOWED_ORIGINS = {
         "http://localhost:5000",
@@ -82,26 +82,6 @@ def create_app(config_class=Config):
             )
             response.headers["Vary"] = "Origin"
         return response
-
-    # ----- Redirect Render hostname to real domain -----
-    @app.before_request
-    def redirect_render_host():
-        host = (_request.host or "").lower()
-        if host.endswith(".onrender.com"):
-            preferred = app.config.get("PREFERRED_HOST", "")
-            if preferred and _request.method in ("GET", "HEAD"):
-                return _redirect(preferred + _request.full_path, code=301)
-        return None
-
-    # ----- Redirect www to non-www -----
-    @app.before_request
-    def redirect_www():
-        host = (_request.host or "").lower()
-        if host == "www.university-finder.me":
-            preferred = app.config.get("PREFERRED_HOST", "")
-            if preferred and _request.method in ("GET", "HEAD"):
-                return _redirect(preferred + _request.full_path, code=301)
-        return None
 
     # ----- API preflight -----
     @app.route("/api/v1/<path:_any>", methods=["OPTIONS"])
