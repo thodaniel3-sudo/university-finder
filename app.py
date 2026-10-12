@@ -1,7 +1,4 @@
-﻿
-
-
-# BSA_fakekey_testing_secret_scanner_1234567890abcdef
+﻿# BSA_fakekey_testing_secret_scanner_1234567890abcdef
 
 
 from datetime import datetime
@@ -24,12 +21,32 @@ from routes.search_routes import search_bp
 from routes.university_routes import university_bp
 from services.auth_decorators import current_user
 from services.rate_limit import limiter
+from routes.reddit_routes import reddit_bp
+from routes.aggregated_sources_routes import aggregated_bp
+from routes.apify_sources_routes import apify_bp
+from routes.extra_sources_routes import extra_bp
 
 
 def create_app(config_class=Config):
     """Application factory. Returns a configured Flask app."""
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    # ----- Trust X-Forwarded-* headers from Vercel -----
+    # Vercel rewrites every request to Render and forwards the original
+    # host (university-finder.me) via X-Forwarded-Host. ProxyFix tells
+    # Flask to trust those headers so url_for() and request.host_url
+    # produce university-finder.me URLs, not the internal Render hostname.
+    from werkzeug.middleware.proxy_fix import ProxyFix
+
+    app.wsgi_app = ProxyFix(
+        app.wsgi_app,
+        x_for=1,
+        x_proto=1,
+        x_host=1,
+        x_port=1,
+        x_prefix=0,
+    )
 
     # ----- Extensions -----
     # CSRFProtect enables {{ csrf_token() }} in every template
@@ -38,28 +55,37 @@ def create_app(config_class=Config):
     csrf = CSRFProtect()
     csrf.init_app(app)
 
-    
     # The discovery save endpoint accepts JSON from the search page.
     # It is not a session-state-changing form, so it is exempt from CSRF.
     from routes.discovery_routes import discovery_bp as _discovery_bp
     csrf.exempt(_discovery_bp)
 
+    # The Apify lookup endpoints accept JSON POSTs from the browser.
+    # Like discovery_bp, they are exempt from CSRF.
+    from routes.apify_sources_routes import apify_bp as _apify_bp
+    csrf.exempt(_apify_bp)
+
+    # The Facebook OAuth endpoints are JSON-driven and must not carry
+    # a CSRF token, so they are exempt from CSRFProtect.
+    from routes.facebook_routes import facebook_bp as _facebook_bp
+    csrf.exempt(_facebook_bp)
+
     # Rate limiter — per-route limits are applied via @limiter.limit()
     limiter.init_app(app)
-
-
 
     # ----- CORS for the Vercel frontend -----
     # The Vercel site is on a different origin than Render. Without these
     # headers the browser blocks every API request. We allow only the
     # origins we control.
-    from flask import request as _request
+    from flask import request as _request, redirect as _redirect
 
     ALLOWED_ORIGINS = {
         "http://localhost:5000",
         "http://localhost:3000",
         "http://localhost:5173",
         "http://127.0.0.1:5000",
+        "https://university-finder.me",
+        "https://www.university-finder.me",
         "https://university-finder-database.onrender.com",
         "https://university-finder-frontend.vercel.app",
     }
@@ -77,11 +103,24 @@ def create_app(config_class=Config):
             response.headers["Vary"] = "Origin"
         return response
 
+    # ----- Redirect the Render hostname to the real domain -----
+    # If someone lands on university-finder-database.onrender.com
+    # directly (including Google), permanently redirect them to
+    # university-finder.me so the search engine updates its index
+    # to the real domain.
+    @app.before_request
+    def redirect_render_host():
+        host = (_request.host or "").lower()
+        if host.endswith(".onrender.com"):
+            preferred = app.config.get("PREFERRED_HOST", "")
+            if preferred and _request.method in ("GET", "HEAD"):
+                return _redirect(preferred + _request.full_path, code=301)
+        return None
+
     @app.route("/api/v1/<path:_any>", methods=["OPTIONS"])
     def api_options(_any):
         """Preflight requests for the JSON API."""
         return ("", 204)
-
 
     # ----- Template context processors -----
     @app.context_processor
@@ -90,6 +129,7 @@ def create_app(config_class=Config):
         return {
             "current_year": datetime.now().year,
             "current_user": current_user(),
+            "preferred_host": app.config.get("PREFERRED_HOST", ""),
         }
 
     # ----- Blueprints -----
@@ -106,7 +146,10 @@ def create_app(config_class=Config):
     app.register_blueprint(search_bp)        # /search
     app.register_blueprint(facebook_bp)      # /facebook/connect, /callback, /status
     app.register_blueprint(discovery_bp)
-
+    app.register_blueprint(reddit_bp)        # /reddit/search, /reddit/api/search
+    app.register_blueprint(aggregated_bp)    # /aggregated/ page
+    app.register_blueprint(apify_bp)         # /apify/ lookup page
+    app.register_blueprint(extra_bp)         # /extra/search, /extra/api/*
 
     # ----- Public routes -----
     @app.route("/")
