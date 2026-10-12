@@ -2,6 +2,45 @@
 
 {% block title %}{{ programme.programme_name }} — {{ university.name }}{% endblock %}
 
+{% block meta_description %}
+    {{ programme.programme_name }} at {{ university.name }}{% if university.country %}, {{ university.country }}{% endif %}. {{ programme.degree_level }}{% if programme.field %} in {{ programme.field }}{% endif %}{% if programme.duration %}, {{ programme.duration }}{% endif %}. Admission requirements, IELTS/TOEFL, and application link.
+{% endblock %}
+
+{% block canonical %}
+    {{ url_for('programmes.detail_view', programme_id=programme.id, _external=True) }}
+{% endblock %}
+
+{% block og_title %}
+    {{ programme.programme_name }} — {{ university.name }}
+{% endblock %}
+
+{% block og_description %}
+    {{ programme.degree_level }} at {{ university.name }}{% if programme.field %} in {{ programme.field }}{% endif %}.
+{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Course",
+  "name": "{{ programme.programme_name }}",
+  "description": "{{ programme.programme_name }} at {{ university.name }}{% if university.country %} in {{ university.country }}{% endif %}.",
+  "provider": {
+    "@type": "EducationalOrganization",
+    "name": "{{ university.name }}",
+    "url": "{{ url_for('universities.detail_view', university_id=university.id, _external=True) }}"
+  }{% if programme.programme_url %},
+  "url": "{{ programme.programme_url }}"{% endif %}{% if programme.language %},
+  "inLanguage": "{{ programme.language }}"{% endif %},
+  "hasCourseInstance": {
+    "@type": "CourseInstance"{% if programme.study_mode %},
+    "courseMode": "{{ programme.study_mode }}"{% endif %}{% if programme.duration %},
+    "courseWorkload": "{{ programme.duration }}"{% endif %}
+  }
+}
+</script>
+{% endblock %}
+
 {% block content %}
 <div class="container">
 
@@ -52,13 +91,9 @@
                     </p>
                 </div>
 
-
-
-
                 {% if current_user %}
                     <form method="post"
                           action="{{ url_for('programmes.' + ('unsave_view' if saved else 'save_view'), programme_id=programme.id) }}">
-                        {# CSRF token via Flask-WTF's context helper #}
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         {% if saved %}
                             <button type="submit" class="btn btn-outline-danger">
@@ -77,18 +112,15 @@
                     </a>
                 {% endif %}
 
-
-
-{% if current_user and saved %}
-    <form method="post"
-          action="{{ url_for('applications.start_view', programme_id=programme.id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn btn-success">
-            <i class="bi bi-clipboard-check me-2"></i>Start application
-        </button>
-    </form>
-{% endif %}
-
+                {% if current_user and saved %}
+                    <form method="post"
+                          action="{{ url_for('applications.start_view', programme_id=programme.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-clipboard-check me-2"></i>Start application
+                        </button>
+                    </form>
+                {% endif %}
             </div>
 
             <hr class="my-4">
@@ -301,9 +333,6 @@
                     </div>
                     <div class="card-body">
 
-                        {# --- Requirements you meet --- #}
-                        {% if grouped[status_labels|attr('__class__') and 'MEETS'] %}
-                        {% endif %}
                         {% if grouped.MEETS %}
                             <h6 class="fw-bold text-success mb-2">
                                 <i class="bi bi-check-circle-fill me-1"></i>
@@ -318,7 +347,6 @@
                             </ul>
                         {% endif %}
 
-                        {# --- Requirements you don't meet --- #}
                         {% if grouped.DOES_NOT_MEET %}
                             <h6 class="fw-bold text-danger mb-2">
                                 <i class="bi bi-x-circle-fill me-1"></i>
@@ -333,7 +361,6 @@
                             </ul>
                         {% endif %}
 
-                        {# --- Unknown --- #}
                         {% if grouped.UNKNOWN %}
                             <h6 class="fw-bold text-secondary mb-2">
                                 <i class="bi bi-question-circle-fill me-1"></i>
@@ -348,7 +375,6 @@
                             </ul>
                         {% endif %}
 
-                        {# --- Requires verification --- #}
                         {% if grouped.REQUIRES_VERIFICATION %}
                             <h6 class="fw-bold text-warning mb-2">
                                 <i class="bi bi-shield-exclamation me-1"></i>

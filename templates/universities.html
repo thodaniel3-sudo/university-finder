@@ -4,6 +4,34 @@
     {% if country %}{{ country }} universities{% else %}Universities{% endif %} — University Finder
 {% endblock %}
 
+{% block meta_description %}
+    {% if country %}
+        Browse {{ total }} universities in {{ country }}. Programmes, admission requirements, tuition, and contact details — all in one place.
+    {% else %}
+        Browse {{ grand_total }} universities in {{ countries|length }} countries. Programmes, admission requirements, tuition, and contact details.
+    {% endif %}
+{% endblock %}
+
+{% block canonical %}
+    {% if country %}
+        {{ url_for('universities.list_view', country=country, _external=True) }}
+    {% else %}
+        {{ url_for('universities.list_view', _external=True) }}
+    {% endif %}
+{% endblock %}
+
+{% block og_title %}
+    {% if country %}{{ country }} universities — University Finder{% else %}Universities — University Finder{% endif %}
+{% endblock %}
+
+{% block og_description %}
+    {% if country %}
+        Browse {{ total }} universities in {{ country }}.
+    {% else %}
+        Browse {{ grand_total }} universities in {{ countries|length }} countries.
+    {% endif %}
+{% endblock %}
+
 {% block content %}
 <div class="container">
 

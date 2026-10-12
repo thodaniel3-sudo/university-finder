@@ -2,6 +2,41 @@
 
 {% block title %}{{ university.name }} — University Finder{% endblock %}
 
+{% block meta_description %}
+    {{ university.name }}{% if university.city %}, {{ university.city }}{% endif %}{% if university.country %}, {{ university.country }}{% endif %} — {{ university.programmes|length }} programme{{ "" if university.programmes|length == 1 else "s" }}. View admission requirements, tuition, and official contact details.
+{% endblock %}
+
+{% block canonical %}
+    {{ url_for('universities.detail_view', university_id=university.id, _external=True) }}
+{% endblock %}
+
+{% block og_title %}
+    {{ university.name }} — University Finder
+{% endblock %}
+
+{% block og_description %}
+    Programmes, admission requirements, and contact details for {{ university.name }}.
+{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "EducationalOrganization",
+  "name": "{{ university.name }}",
+  "url": "{{ url_for('universities.detail_view', university_id=university.id, _external=True) }}"{% if university.website_url %},
+  "sameAs": "{{ university.website_url }}"{% endif %}{% if university.official_email %},
+  "email": "{{ university.official_email }}"{% endif %},
+  "address": {
+    "@type": "PostalAddress"{% if university.city %},
+    "addressLocality": "{{ university.city }}"{% endif %}{% if university.state_region %},
+    "addressRegion": "{{ university.state_region }}"{% endif %}{% if university.country %},
+    "addressCountry": "{{ university.country }}"{% endif %}
+  }
+}
+</script>
+{% endblock %}
+
 {% block content %}
 <div class="container">
     <a href="{{ url_for('universities.list_view') }}"

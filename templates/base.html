@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
     {% block head_extra %}{% endblock %}
+
     <meta name="description"
           content="{% block meta_description %}Discover universities, master's programmes, PhD opportunities, and scholarships worldwide. Search, match, and apply — all in one place.{% endblock %}">
 
@@ -47,7 +48,8 @@
     <meta name="twitter:description"
           content="Discover universities, programmes, and scholarships worldwide.">
 
-    <!-- Structured data: Organization (site-wide) -->
+    <!-- Structured data (child templates can override) -->
+    {% block structured_data %}
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -58,6 +60,7 @@
       "description": "Discover universities, programmes, and scholarships worldwide."
     }
     </script>
+    {% endblock %}
 </head>
 <body>
 
@@ -199,8 +202,7 @@
                 </div>
                 <div class="col-md-6 text-md-end">
                     <p class="text-secondary mb-1 small">
-                        This platform provides information, assistance , and tools to help you in your university search and application process.
-                    
+                        This platform provides information, assistance, and tools to help you in your university search and application process.
                     </p>
                     <p class="text-secondary mb-0 small">
                         &copy; {{ current_year }} University Finder
