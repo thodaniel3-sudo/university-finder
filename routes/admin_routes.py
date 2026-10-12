@@ -16,7 +16,7 @@ from flask import (
     request,
     url_for,
 )
-from flask import render_template, current_app, abort
+from flask import current_app
 from services.auth_decorators import current_user, login_required
 from services.admin_decorators import admin_required
 from services.admin_service import (
@@ -235,24 +235,26 @@ def requirements_edit(programme_id: int):
 
 # ============================================================
 # Bulk CSV import
+#
+# NOTE: One route, two HTTP methods. The GET branch shows the
+# upload form; the POST branch processes the CSV. This replaces
+# the previous two-function pattern that produced a duplicate
+# /admin/import rule and broke the Render deploy.
 # ============================================================
 
-@admin_bp.route("/import", methods=["GET"])
+@admin_bp.route("/import", methods=["GET", "POST"])
 @admin_required
 def import_view():
-    """The CSV upload page."""
-    return render_template(
-        "admin/import.html",
-        import_types=IMPORT_TYPES,
-        results=None,
-        selected_type=None,
-    )
+    """CSV upload page (GET) and CSV import handler (POST)."""
+    if request.method == "GET":
+        return render_template(
+            "admin/import.html",
+            import_types=IMPORT_TYPES,
+            results=None,
+            selected_type=None,
+        )
 
-
-@admin_bp.route("/import", methods=["POST"])
-@admin_required
-def import_submit():
-    """Handle the CSV upload."""
+    # ---- POST branch ----
     import_type = (request.form.get("import_type") or "").strip()
     dry_run = bool(request.form.get("dry_run"))
     uploaded = request.files.get("csv_file")
@@ -313,15 +315,12 @@ def import_template(import_type: str):
     cfg = IMPORT_TYPES[import_type]
     schema = cfg["schema"]
 
-    # Build the CSV in memory
     output = io.StringIO()
     writer = csv.writer(output)
 
-    # Header row = all known columns for this import type
     columns = schema["all"]
     writer.writerow(columns)
 
-    # One example row (helpful for admins)
     example = _example_row(import_type, columns)
     writer.writerow(example)
 
@@ -402,6 +401,7 @@ def _example_row(import_type: str, columns: list[str]) -> list[str]:
     example = examples.get(import_type, {})
     return [example.get(c, "") for c in columns]
 
+
 @admin_bp.route("/tables")
 @login_required
 def tables_view():
@@ -410,7 +410,6 @@ def tables_view():
     from the browser, without opening the Supabase dashboard.
     """
     user = current_user()
-    # Only real admins may see this page.
     if not user or not user.get("is_admin"):
         abort(403)
 
