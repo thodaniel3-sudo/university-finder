@@ -33,10 +33,6 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
 
     # ----- Trust X-Forwarded-* headers from Vercel -----
-    # Vercel rewrites every request to Render and forwards the original
-    # host (university-finder.me) via X-Forwarded-Host. ProxyFix tells
-    # Flask to trust those headers so url_for() and request.host_url
-    # produce university-finder.me URLs, not the internal Render hostname.
     from werkzeug.middleware.proxy_fix import ProxyFix
 
     app.wsgi_app = ProxyFix(
@@ -49,34 +45,21 @@ def create_app(config_class=Config):
     )
 
     # ----- Extensions -----
-    # CSRFProtect enables {{ csrf_token() }} in every template
-    # AND automatically rejects unsafe HTTP methods (POST/PUT/DELETE)
-    # that don't carry a valid token.
     csrf = CSRFProtect()
     csrf.init_app(app)
 
-    # The discovery save endpoint accepts JSON from the search page.
-    # It is not a session-state-changing form, so it is exempt from CSRF.
     from routes.discovery_routes import discovery_bp as _discovery_bp
     csrf.exempt(_discovery_bp)
 
-    # The Apify lookup endpoints accept JSON POSTs from the browser.
-    # Like discovery_bp, they are exempt from CSRF.
     from routes.apify_sources_routes import apify_bp as _apify_bp
     csrf.exempt(_apify_bp)
 
-    # The Facebook OAuth endpoints are JSON-driven and must not carry
-    # a CSRF token, so they are exempt from CSRFProtect.
     from routes.facebook_routes import facebook_bp as _facebook_bp
     csrf.exempt(_facebook_bp)
 
-    # Rate limiter — per-route limits are applied via @limiter.limit()
     limiter.init_app(app)
 
     # ----- CORS for the Vercel frontend -----
-    # The Vercel site is on a different origin than Render. Without these
-    # headers the browser blocks every API request. We allow only the
-    # origins we control.
     from flask import request as _request, redirect as _redirect
 
     ALLOWED_ORIGINS = {
@@ -104,10 +87,6 @@ def create_app(config_class=Config):
         return response
 
     # ----- Redirect the Render hostname to the real domain -----
-    # If someone lands on university-finder-database.onrender.com
-    # directly (including Google), permanently redirect them to
-    # university-finder.me so the search engine updates its index
-    # to the real domain.
     @app.before_request
     def redirect_render_host():
         host = (_request.host or "").lower()
@@ -118,8 +97,6 @@ def create_app(config_class=Config):
         return None
 
     # ----- Redirect www.university-finder.me to university-finder.me -----
-    # Google treats www and non-www as two separate sites. Pick one as
-    # canonical and 301-redirect the other. We choose non-www.
     @app.before_request
     def redirect_www():
         host = (_request.host or "").lower()
@@ -129,6 +106,7 @@ def create_app(config_class=Config):
                 return _redirect(preferred + _request.full_path, code=301)
         return None
 
+    # ----- API preflight -----
     @app.route("/api/v1/<path:_any>", methods=["OPTIONS"])
     def api_options(_any):
         """Preflight requests for the JSON API."""
@@ -145,23 +123,23 @@ def create_app(config_class=Config):
         }
 
     # ----- Blueprints -----
-    app.register_blueprint(auth_bp)          # /register, /login, /logout, /dashboard
-    app.register_blueprint(admin_bp)         # /admin
-    app.register_blueprint(profile_bp)       # /profile
-    app.register_blueprint(university_bp)    # /universities, /universities/<id>
-    app.register_blueprint(programme_bp)     # /programmes/<id>, save/unsave
-    app.register_blueprint(saved_bp)         # /saved
-    app.register_blueprint(application_bp)   # /applications
-    app.register_blueprint(document_bp)      # /documents
-    app.register_blueprint(email_bp)         # /emails
-    app.register_blueprint(external_bp)      # /external/*
-    app.register_blueprint(search_bp)        # /search
-    app.register_blueprint(facebook_bp)      # /facebook/connect, /callback, /status
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(profile_bp)
+    app.register_blueprint(university_bp)
+    app.register_blueprint(programme_bp)
+    app.register_blueprint(saved_bp)
+    app.register_blueprint(application_bp)
+    app.register_blueprint(document_bp)
+    app.register_blueprint(email_bp)
+    app.register_blueprint(external_bp)
+    app.register_blueprint(search_bp)
+    app.register_blueprint(facebook_bp)
     app.register_blueprint(discovery_bp)
-    app.register_blueprint(reddit_bp)        # /reddit/search, /reddit/api/search
-    app.register_blueprint(aggregated_bp)    # /aggregated/ page
-    app.register_blueprint(apify_bp)         # /apify/ lookup page
-    app.register_blueprint(extra_bp)         # /extra/search, /extra/api/*
+    app.register_blueprint(reddit_bp)
+    app.register_blueprint(aggregated_bp)
+    app.register_blueprint(apify_bp)
+    app.register_blueprint(extra_bp)
 
     # ----- Public routes -----
     @app.route("/")
@@ -198,11 +176,9 @@ def create_app(config_class=Config):
         )
         from werkzeug.exceptions import HTTPException
 
-        # Let HTTP exceptions (404, 403, etc.) pass through.
         if isinstance(exc, HTTPException):
             return exc
 
-        # If this is a Supabase JWT-expired error, try to refresh and retry.
         if is_jwt_expired_error(exc) and flask_session.get("refresh_token"):
             if _refresh():
                 return redirect(request.full_path)
@@ -210,7 +186,6 @@ def create_app(config_class=Config):
             flash("Your session expired. Please log in again.", "warning")
             return redirect(url_for("auth.login"))
 
-        # Anything else: re-raise so Flask's normal error handling shows.
         raise exc from None
 
     return app
