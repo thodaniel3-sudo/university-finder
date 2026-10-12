@@ -117,6 +117,18 @@ def create_app(config_class=Config):
                 return _redirect(preferred + _request.full_path, code=301)
         return None
 
+    # ----- Redirect www.university-finder.me to university-finder.me -----
+    # Google treats www and non-www as two separate sites. Pick one as
+    # canonical and 301-redirect the other. We choose non-www.
+    @app.before_request
+    def redirect_www():
+        host = (_request.host or "").lower()
+        if host == "www.university-finder.me":
+            preferred = app.config.get("PREFERRED_HOST", "")
+            if preferred and _request.method in ("GET", "HEAD"):
+                return _redirect(preferred + _request.full_path, code=301)
+        return None
+
     @app.route("/api/v1/<path:_any>", methods=["OPTIONS"])
     def api_options(_any):
         """Preflight requests for the JSON API."""
