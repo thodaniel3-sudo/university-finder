@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block title %}
+  {% if query %}Aggregated: {{ query }}{% else %}Aggregated sources{% endif %} — University Finder
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h1 class="fw-bold mb-0">
+            <i class="bi bi-diagram-3 me-2"></i>Aggregated sources
+        </h1>
+        <a href="{{ url_for('search.search_view', q=query) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Back to main results
+        </a>
+    </div>
+
+    {% if query %}
+        <p class="text-muted mb-4">
+            News, identity, research, and publications for <strong>"{{ query }}"</strong>.
+        </p>
+
+        <ul class="nav nav-tabs mb-3" id="aggTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if active_tab == 'news' %}active{% endif %}"
+                        data-bs-toggle="tab" data-bs-target="#tab-news" data-tab="news"
+                        type="button" role="tab">
+                    <i class="bi bi-newspaper me-1"></i>News
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if active_tab == 'identity' %}active{% endif %}"
+                        data-bs-toggle="tab" data-bs-target="#tab-identity" data-tab="identity"
+                        type="button" role="tab">
+                    <i class="bi bi-info-circle me-1"></i>Identity
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if active_tab == 'research' %}active{% endif %}"
+                        data-bs-toggle="tab" data-bs-target="#tab-research" data-tab="research"
+                        type="button" role="tab">
+                    <i class="bi bi-journal-text me-1"></i>Research
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if active_tab == 'publications' %}active{% endif %}"
+                        data-bs-toggle="tab" data-bs-target="#tab-publications" data-tab="publications"
+                        type="button" role="tab">
+                    <i class="bi bi-book me-1"></i>Publications
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            {% for tab in ['news', 'identity', 'research', 'publications'] %}
+            <div class="tab-pane fade {% if active_tab == tab %}show active{% endif %}"
+                 id="tab-{{ tab }}" role="tabpanel">
+                <div id="status-{{ tab }}" class="mb-3">
+                    <div class="alert alert-info mb-0">
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-2"></div>
+                            <span>Loading {{ tab }}…</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="results-{{ tab }}"></div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card shadow-sm border-0">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-diagram-3" style="font-size: 3rem;"></i>
+                <h4 class="fw-bold mt-3">Aggregated sources</h4>
+                <p class="text-muted mb-0">
+                    Go back to the main search and click <em>Open aggregated view</em>.
+                </p>
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+
+{% block body_extra %}
+{% if query %}
+<script>
+(function () {
+    "use strict";
+
+    var query = {{ query|tojson }};
+    var loaded = { news: false, identity: false, research: false, publications: false };
+
+    function escapeHtml(s) {
+        return String(s == null ? "" : s)
+            .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function saveToDatabase(payload, btn) {
+        if (btn.disabled) return;
+        btn.disabled = true;
+        var original = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving…';
+        fetch("/discoveries/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                url: payload.url || "",
+                title: payload.title || "",
+                description: payload.description || "",
+                source_type: payload.source_type || "aggregated",
+                source_domain: payload.source_domain || "",
+                search_query: query
+            })
+        })
+        .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+        .then(function (data) {
+            if (data && data.saved_count && data.saved_count > 1) {
+                btn.className = "btn btn-sm btn-success";
+                btn.innerHTML = '<i class="bi bi-check2-all me-1"></i>Already saved';
+            } else {
+                btn.className = "btn btn-sm btn-success";
+                btn.innerHTML = '<i class="bi bi-check2 me-1"></i>Saved';
+            }
+        })
+        .catch(function () {
+            btn.disabled = false;
+            btn.className = "btn btn-sm btn-outline-danger";
+            btn.innerHTML = original + " (retry)";
+        });
+    }
+
+    function wireSaveButtons(scope) {
+        (scope || document).querySelectorAll("[data-save]").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                try { saveToDatabase(JSON.parse(btn.getAttribute("data-payload")), btn); }
+                catch (e) { console.error(e); }
+            });
+        });
+    }
+
+    function badge(kind, color, label) {
+        return '<span class="badge" style="background:' + color + ';">' + label + '</span>';
+    }
+
+    function card(r, badgeHtml, meta, payload) {
+        var url = r.url || r.source_url || "";
+        var desc = r.description || "";
+        return '<div class="col-lg-6">' +
+            '<div class="card shadow-sm border-0 h-100">' +
+              '<div class="card-body d-flex flex-column">' +
+                '<div class="mb-2">' + badgeHtml + '</div>' +
+                '<h6 class="fw-bold mb-1">' +
+                  (url ? '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener" class="text-decoration-none text-dark">' + escapeHtml(r.title) + '</a>' : escapeHtml(r.title)) +
+                '</h6>' +
+                (meta ? '<p class="small text-muted mb-2">' + meta + '</p>' : '') +
+                (desc ? '<p class="small mb-3 flex-grow-1">' + escapeHtml(desc) + '</p>' : '<div class="flex-grow-1"></div>') +
+                '<div class="d-flex flex-wrap gap-2">' +
+                  (url ? '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">Open <i class="bi bi-box-arrow-up-right ms-1"></i></a>' : '') +
+                  '<button type="button" class="btn btn-sm btn-outline-success" data-save data-payload=\'' + JSON.stringify(payload).replace(/'/g, "&#39;") + '\'>' +
+                    '<i class="bi bi-database-add me-1"></i>Save to database' +
+                  '</button>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+    }
+
+    function formatNewsDate(raw) {
+        // raw looks like "Thu, 01 Oct 2026 12:34:56 GMT"
+        if (!raw) return "";
+        var parts = String(raw).split(" ");
+        // parts[0] = day-of-week, parts[1] = day, parts[2] = month, parts[3] = year
+        if (parts.length >= 4) {
+            return parts.slice(1, 4).join(" ");
+        }
+        return String(raw).slice(0, 16);
+    }
+
+    var renderers = {
+        news: function (r) {
+            var meta = [];
+            if (r.provider) meta.push('<i class="bi bi-globe me-1"></i>' + escapeHtml(r.provider));
+            if (r.pub_date) meta.push('<i class="bi bi-calendar me-1"></i>' + escapeHtml(formatNewsDate(r.pub_date)));
+            var payload = { url: r.url, title: r.title, description: r.description || "", source_type: "news", source_domain: r.provider || "" };
+            return card(r, badge("news", "#0dcaf0", "News"), meta.join(" · "), payload);
+        },
+        identity: function (r) {
+            var meta = [];
+            if (r.wikidata_description) meta.push(escapeHtml(r.wikidata_description));
+            if (r.wikidata_id) meta.push('<i class="bi bi-link-45deg me-1"></i>' + escapeHtml(r.wikidata_id));
+            var thumb = r.thumbnail ? '<img src="' + escapeHtml(r.thumbnail) + '" alt="" class="rounded mb-2" style="max-width:100%;height:auto;">' : '';
+            var payload = { url: r.url, title: r.title, description: r.description || "", source_type: "identity", source_domain: "wikipedia.org" };
+            var url = r.url || "";
+            return '<div class="col-lg-8">' +
+                '<div class="card shadow-sm border-0 h-100">' +
+                  '<div class="card-body">' +
+                    '<div class="mb-2">' + badge("identity", "#6f42c1", "Identity") + '</div>' +
+                    thumb +
+                    '<h5 class="fw-bold mb-1">' + escapeHtml(r.title) + '</h5>' +
+                    (meta.length ? '<p class="small text-muted mb-2">' + meta.join(" · ") + '</p>' : '') +
+                    (r.description ? '<p class="mb-3">' + escapeHtml(r.description) + '</p>' : '') +
+                    '<div class="d-flex flex-wrap gap-2">' +
+                      (url ? '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">Wikipedia <i class="bi bi-box-arrow-up-right ms-1"></i></a>' : '') +
+                      (r.website ? '<a href="' + escapeHtml(r.website) + '" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">Official site</a>' : '') +
+                      '<button type="button" class="btn btn-sm btn-outline-success" data-save data-payload=\'' + JSON.stringify(payload).replace(/'/g, "&#39;") + '\'>' +
+                        '<i class="bi bi-database-add me-1"></i>Save to database' +
+                      '</button>' +
+                    '</div>' +
+                  '</div>' +
+                '</div>' +
+              '</div>';
+        },
+        research: function (r) {
+            var meta = [];
+            if (r.authors) meta.push('<i class="bi bi-people me-1"></i>' + escapeHtml(r.authors));
+            if (r.venue) meta.push('<i class="bi bi-journal me-1"></i>' + escapeHtml(r.venue));
+            if (r.year) meta.push('<i class="bi bi-calendar3 me-1"></i>' + escapeHtml(r.year));
+            meta.push('<i class="bi bi-quote me-1"></i>' + (r.cited_by || 0));
+            var payload = { url: r.url, title: r.title, description: r.description || "", source_type: "research", source_domain: "openalex.org" };
+            return card(r, badge("research", "#0d6efd", "Research"), meta.join(" · "), payload);
+        },
+        publications: function (r) {
+            var meta = [];
+            if (r.authors) meta.push('<i class="bi bi-people me-1"></i>' + escapeHtml(r.authors));
+            if (r.venue) meta.push('<i class="bi bi-journal me-1"></i>' + escapeHtml(r.venue));
+            if (r.year) meta.push('<i class="bi bi-calendar3 me-1"></i>' + escapeHtml(r.year));
+            if (r.doi) meta.push('<i class="bi bi-link-45deg me-1"></i>' + escapeHtml(r.doi));
+            var payload = { url: r.url, title: r.title, description: r.description || "", source_type: "publication", source_domain: "crossref.org" };
+            return card(r, badge("publication", "#d63384", "Publication"), meta.join(" · "), payload);
+        }
+    };
+
+    function loadTab(tab) {
+        if (loaded[tab]) return;
+        loaded[tab] = true;
+
+        var statusBox = document.getElementById("status-" + tab);
+        var resultsBox = document.getElementById("results-" + tab);
+        if (!statusBox || !resultsBox) return;
+
+        fetch("/aggregated/api/" + tab + "?q=" + encodeURIComponent(query))
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                statusBox.style.display = "none";
+                var total = data.total || 0;
+                var items = data.results || [];
+
+                if (total === 0) {
+                    resultsBox.innerHTML =
+                      '<div class="alert alert-secondary">' +
+                        '<i class="bi bi-info-circle me-1"></i>' +
+                        'No ' + escapeHtml(tab) + ' found for that query.' +
+                      '</div>';
+                    return;
+                }
+
+                resultsBox.innerHTML =
+                  '<h5 class="fw-bold mb-3"><i class="bi bi-list-ul me-2"></i>Results <span class="text-muted fs-6">(' + total + ')</span></h5>' +
+                  '<div class="row g-3">' + items.map(renderers[tab]).join("") + '</div>';
+
+                wireSaveButtons(resultsBox);
+            })
+            .catch(function () {
+                statusBox.innerHTML =
+                  '<div class="alert alert-danger mb-0">' +
+                    '<i class="bi bi-exclamation-triangle me-1"></i>' +
+                    'Could not load ' + escapeHtml(tab) + '. The rest of the app is unaffected.' +
+                  '</div>';
+            });
+    }
+
+    document.querySelectorAll('#aggTabs button[data-tab]').forEach(function (btn) {
+        btn.addEventListener("shown.bs.tab", function (e) {
+            loadTab(e.target.getAttribute("data-tab"));
+        });
+    });
+
+    var activeBtn = document.querySelector('#aggTabs button.active[data-tab]');
+    if (activeBtn) loadTab(activeBtn.getAttribute("data-tab"));
+})();
+</script>
+{% endif %}
+{% endblock %}

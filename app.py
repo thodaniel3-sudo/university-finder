@@ -35,10 +35,6 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
 
     # ----- Trust X-Forwarded-* headers from Vercel -----
-    # Vercel rewrites every request to Render and forwards the original
-    # host (university-finder.me) via X-Forwarded-Host. ProxyFix tells
-    # Flask to trust those headers so url_for() and request.host_url
-    # produce university-finder.me URLs, not the internal Render hostname.
     from werkzeug.middleware.proxy_fix import ProxyFix
 
     app.wsgi_app = ProxyFix(
@@ -54,12 +50,10 @@ def create_app(config_class=Config):
     csrf = CSRFProtect()
     csrf.init_app(app)
 
-    # Exempt JSON-only blueprints from CSRF protection.
     csrf.exempt(discovery_bp)
     csrf.exempt(apify_bp)
     csrf.exempt(facebook_bp)
 
-    # Rate limiter
     limiter.init_app(app)
 
     # ----- CORS for the Vercel frontend -----
@@ -89,7 +83,7 @@ def create_app(config_class=Config):
             response.headers["Vary"] = "Origin"
         return response
 
-    # ----- Redirect the Render hostname to the real domain -----
+    # ----- Redirect Render hostname to real domain -----
     @app.before_request
     def redirect_render_host():
         host = (_request.host or "").lower()
@@ -99,7 +93,7 @@ def create_app(config_class=Config):
                 return _redirect(preferred + _request.full_path, code=301)
         return None
 
-    # ----- Redirect www.university-finder.me to university-finder.me -----
+    # ----- Redirect www to non-www -----
     @app.before_request
     def redirect_www():
         host = (_request.host or "").lower()
@@ -114,7 +108,7 @@ def create_app(config_class=Config):
     def api_options(_any):
         return ("", 204)
 
-    # ----- Template context processors -----
+    # ----- Context processors -----
     @app.context_processor
     def inject_globals():
         return {
@@ -160,7 +154,7 @@ def create_app(config_class=Config):
     def rate_limit_exceeded(e):
         return render_template("429.html"), 429
 
-    # ----- Global Supabase JWT-expired handling -----
+    # ----- Supabase JWT-expired handling -----
     from services.session_refresh import (
         is_jwt_expired_error,
         refresh_access_token as _refresh,

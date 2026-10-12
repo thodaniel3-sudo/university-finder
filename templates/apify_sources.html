@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}Apify Lookups — University Finder{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h1 class="fw-bold mb-0">
+            <i class="bi bi-box-seam me-2"></i>Apify Lookups
+        </h1>
+        <a href="{{ url_for('search.search_view') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Back to search
+        </a>
+    </div>
+
+    <p class="text-muted mb-4">
+        Look up <strong>specific URLs</strong> — university course catalogs and Rate My Professors pages.
+        These are lookup tools, not search engines. Paste a URL, get structured results.
+    </p>
+
+    {% if not apify_available %}
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            Apify is not configured. Add <code>APIFY_TOKEN</code> to <code>.env</code>.
+        </div>
+    {% else %}
+
+    <ul class="nav nav-tabs mb-4" id="apifyTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-courses-btn" data-bs-toggle="tab"
+                    data-bs-target="#tab-courses" data-tab="courses" type="button" role="tab">
+                <i class="bi bi-journal-bookmark me-1"></i>Course Catalog
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-professors-btn" data-bs-toggle="tab"
+                    data-bs-target="#tab-professors" data-tab="professors" type="button" role="tab">
+                <i class="bi bi-person-badge me-1"></i>Rate My Professors
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+
+        <!-- COURSE CATALOG TAB -->
+        <div class="tab-pane fade show active" id="tab-courses" role="tabpanel">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-2">University Course Catalog Lookup</h5>
+                    <p class="text-muted small mb-3">
+                        Paste a specific university course catalog URL. The scraper extracts course codes,
+                        titles, credits, departments, and prerequisites.
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Catalog URL</label>
+                        <input type="url" id="course-url" class="form-control"
+                               placeholder="https://catalog.university.edu/courses">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Maximum courses</label>
+                        <input type="number" id="course-limit" class="form-control" value="50" min="1" max="500">
+                    </div>
+                    <button id="course-lookup-btn" class="btn btn-primary">
+                        <i class="bi bi-search me-1"></i>Lookup Course Catalog
+                    </button>
+                </div>
+            </div>
+            <div id="course-status"></div>
+            <div id="course-results"></div>
+        </div>
+
+        <!-- PROFESSORS TAB -->
+        <div class="tab-pane fade" id="tab-professors" role="tabpanel">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-2">Rate My Professors Lookup</h5>
+                    <p class="text-muted small mb-3">
+                        Paste a Rate My Professors search URL. Returns professor names, ratings, difficulty,
+                        and review counts.
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">RMP Search URL</label>
+                        <input type="url" id="prof-url" class="form-control"
+                               placeholder="https://www.ratemyprofessors.com/search/professors?q=math">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Maximum professors</label>
+                        <input type="number" id="prof-limit" class="form-control" value="25" min="1" max="100">
+                    </div>
+                    <button id="prof-lookup-btn" class="btn btn-primary">
+                        <i class="bi bi-search me-1"></i>Lookup Professors
+                    </button>
+                </div>
+            </div>
+            <div id="prof-status"></div>
+            <div id="prof-results"></div>
+        </div>
+
+    </div>
+
+    {% endif %}
+
+</div>
+{% endblock %}
+
+
+{% block body_extra %}
+{% if apify_available %}
+<script>
+(function () {
+    "use strict";
+
+    function escapeHtml(s) {
+        return String(s == null ? "" : s)
+            .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function setStatus(box, type, message) {
+        box.innerHTML = '<div class="alert alert-' + type + '">' +
+            (type === "info" ? '<div class="spinner-border spinner-border-sm me-2"></div>' : '') +
+            escapeHtml(message) + '</div>';
+    }
+
+    function renderCourse(r) {
+        var meta = [];
+        if (r.course_code) meta.push(escapeHtml(r.course_code));
+        if (r.credits) meta.push(escapeHtml(r.credits) + " credits");
+        if (r.department) meta.push(escapeHtml(r.department));
+
+        return '<div class="col-lg-6">' +
+            '<div class="card shadow-sm border-0 h-100">' +
+              '<div class="card-body d-flex flex-column">' +
+                '<h6 class="fw-bold mb-1">' + escapeHtml(r.title) + '</h6>' +
+                (meta.length ? '<p class="small text-muted mb-2">' + meta.join(" · ") + '</p>' : '') +
+                (r.description ? '<p class="small mb-3 flex-grow-1">' + escapeHtml(r.description) + '</p>' : '<div class="flex-grow-1"></div>') +
+                (r.prerequisites ? '<p class="small text-muted mb-0"><strong>Prereqs:</strong> ' + escapeHtml(r.prerequisites) + '</p>' : '') +
+              '</div>' +
+            '</div>' +
+          '</div>';
+    }
+
+    function renderProfessor(r) {
+        var meta = [];
+        if (r.rating) meta.push("⭐ " + escapeHtml(String(r.rating)));
+        if (r.difficulty) meta.push("Difficulty: " + escapeHtml(String(r.difficulty)));
+        if (r.num_ratings) meta.push(escapeHtml(String(r.num_ratings)) + " reviews");
+
+        return '<div class="col-lg-6">' +
+            '<div class="card shadow-sm border-0 h-100">' +
+              '<div class="card-body d-flex flex-column">' +
+                '<h6 class="fw-bold mb-1">' + escapeHtml(r.title) + '</h6>' +
+                (r.school ? '<p class="small text-muted mb-1">' + escapeHtml(r.school) + '</p>' : '') +
+                (meta.length ? '<p class="small text-muted mb-0">' + meta.join(" · ") + '</p>' : '') +
+              '</div>' +
+            '</div>' +
+          '</div>';
+    }
+
+    function wireCourses() {
+        var btn = document.getElementById("course-lookup-btn");
+        var statusBox = document.getElementById("course-status");
+        var resultsBox = document.getElementById("course-results");
+
+        btn.addEventListener("click", function () {
+            var url = document.getElementById("course-url").value.trim();
+            var limit = parseInt(document.getElementById("course-limit").value, 10) || 50;
+
+            if (!url) { setStatus(statusBox, "warning", "Please enter a course catalog URL."); return; }
+
+            btn.disabled = true;
+            setStatus(statusBox, "info", "Running Apify scraper… this can take 30–90 seconds.");
+            resultsBox.innerHTML = "";
+
+            fetch("/apify/api/courses", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url: url, max_courses: limit })
+            })
+            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+            .then(function (res) {
+                btn.disabled = false;
+                if (!res.ok || res.data.error) {
+                    setStatus(statusBox, "danger", res.data.error || "Lookup failed.");
+                    return;
+                }
+                statusBox.innerHTML = "";
+                var items = res.data.results || [];
+                if (!items.length) {
+                    setStatus(statusBox, "secondary", "No courses found on that page.");
+                    return;
+                }
+                resultsBox.innerHTML =
+                  '<h5 class="fw-bold mb-3">Courses <span class="text-muted fs-6">(' + items.length + ')</span></h5>' +
+                  '<div class="row g-3">' + items.map(renderCourse).join("") + '</div>';
+            })
+            .catch(function () {
+                btn.disabled = false;
+                setStatus(statusBox, "danger", "Network error. Check the console.");
+            });
+        });
+    }
+
+    function wireProfessors() {
+        var btn = document.getElementById("prof-lookup-btn");
+        var statusBox = document.getElementById("prof-status");
+        var resultsBox = document.getElementById("prof-results");
+
+        btn.addEventListener("click", function () {
+            var url = document.getElementById("prof-url").value.trim();
+            var limit = parseInt(document.getElementById("prof-limit").value, 10) || 25;
+
+            if (!url) { setStatus(statusBox, "warning", "Please enter an RMP search URL."); return; }
+
+            btn.disabled = true;
+            setStatus(statusBox, "info", "Running Apify scraper… this can take 30–90 seconds.");
+            resultsBox.innerHTML = "";
+
+            fetch("/apify/api/professors", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url: url, max_items: limit })
+            })
+            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+            .then(function (res) {
+                btn.disabled = false;
+                if (!res.ok || res.data.error) {
+                    setStatus(statusBox, "danger", res.data.error || "Lookup failed.");
+                    return;
+                }
+                statusBox.innerHTML = "";
+                var items = res.data.results || [];
+                if (!items.length) {
+                    setStatus(statusBox, "secondary", "No professors found for that URL.");
+                    return;
+                }
+                resultsBox.innerHTML =
+                  '<h5 class="fw-bold mb-3">Professors <span class="text-muted fs-6">(' + items.length + ')</span></h5>' +
+                  '<div class="row g-3">' + items.map(renderProfessor).join("") + '</div>';
+            })
+            .catch(function () {
+                btn.disabled = false;
+                setStatus(statusBox, "danger", "Network error. Check the console.");
+            });
+        });
+    }
+
+    wireCourses();
+    wireProfessors();
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -2,20 +2,18 @@
 Facebook OAuth routes.
 
 Endpoints:
-  GET  /facebook/connect   — redirect the user to Facebook's OAuth dialog
-  GET  /facebook/callback  — receive the OAuth code, exchange for tokens,
-                             store Page tokens in the Flask session
-  GET  /facebook/status    — JSON: whether the user is connected
+  GET  /facebook/connect    — redirect the user to Facebook's OAuth dialog
+  GET  /facebook/callback   — receive the OAuth code, exchange for tokens,
+                              store Page tokens in the Flask session
+  GET  /facebook/status     — JSON: whether the user is connected
   POST /facebook/disconnect — clear stored tokens from the session
 
-Tokens are stored in the Flask server-side session (signed cookie),
-never in localStorage or exposed to the frontend JavaScript.
-
-Security notes:
-  - META_APP_SECRET never leaves the server.
-  - The `state` parameter is used to prevent CSRF on the OAuth callback.
-  - If a user is not logged in to University Finder, we still allow
-    Facebook connection — the tokens are stored in their session.
+CSRF protection (state parameter):
+  We use a signed, self-verifying token instead of a session cookie.
+  The token is created with itsdangerous (signed with SECRET_KEY) and
+  contains a timestamp so it expires after 10 minutes. This works
+  reliably over HTTP and HTTPS, on any browser, with no SameSite
+  cookie issues.
 """
 
 from __future__ import annotations
@@ -32,6 +30,7 @@ from flask import (
     session,
     url_for,
 )
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 from services.facebook_service import (
     build_oauth_url,
@@ -43,6 +42,46 @@ from services.facebook_service import (
 
 
 facebook_bp = Blueprint("facebook", __name__, url_prefix="/facebook")
+
+
+# ============================================================
+# Signed-state helpers
+# ============================================================
+
+_STATE_SALT = "facebook-oauth-state-v1"
+_STATE_MAX_AGE_S = 600   # 10 minutes
+
+
+def _serializer() -> URLSafeTimedSerializer:
+    """Build a serializer keyed off the app SECRET_KEY."""
+    return URLSafeTimedSerializer(
+        secret_key=current_app.config["SECRET_KEY"],
+        salt=_STATE_SALT,
+    )
+
+
+def _make_state() -> str:
+    """Create a signed state token: <random>.<signature>.<timestamp>."""
+    nonce = secrets.token_urlsafe(24)
+    return _serializer().dumps(nonce)
+
+
+def _verify_state(token: str) -> bool:
+    """Verify a signed state token. Returns True if valid and fresh."""
+    if not token:
+        return False
+    try:
+        _serializer().loads(token, max_age=_STATE_MAX_AGE_S)
+        return True
+    except SignatureExpired:
+        print("[facebook] state token expired", file=sys.stderr)
+        return False
+    except BadSignature:
+        print("[facebook] state token signature invalid", file=sys.stderr)
+        return False
+    except Exception as exc:
+        print(f"[facebook] state verify failed: {exc}", file=sys.stderr)
+        return False
 
 
 # ============================================================
@@ -58,9 +97,7 @@ def connect():
             "message": "Facebook integration is not enabled on this server.",
         }), 503
 
-    # CSRF protection: random state stored in the session, verified on callback.
-    state = secrets.token_urlsafe(24)
-    session["facebook_oauth_state"] = state
+    state = _make_state()
 
     try:
         url = build_oauth_url(state=state)
@@ -74,52 +111,51 @@ def connect():
     return redirect(url)
 
 
-# ============================================================
-# GET /facebook/callback
-# ============================================================
+
+
+
 
 @facebook_bp.route("/callback")
 def callback():
     """Handle the OAuth callback from Facebook."""
     error = request.args.get("error")
     if error:
-        return jsonify({
-            "error": "facebook_denied",
-            "message": request.args.get("error_description") or error,
-        }), 400
+        return redirect(url_for(
+            "search.search_view",
+            facebook="denied",
+        ))
 
     code = request.args.get("code")
     state = request.args.get("state")
-    expected_state = session.pop("facebook_oauth_state", None)
 
     if not code:
-        return jsonify({
-            "error": "missing_code",
-            "message": "Facebook did not return an authorization code.",
-        }), 400
+        return redirect(url_for(
+            "search.search_view",
+            facebook="missing_code",
+        ))
 
-    if not state or state != expected_state:
-        return jsonify({
-            "error": "invalid_state",
-            "message": "OAuth state mismatch. Please try connecting again.",
-        }), 400
+    if not _verify_state(state):
+        return redirect(url_for(
+            "search.search_view",
+            facebook="invalid_state",
+        ))
 
     # --- Exchange code for short-lived user token ---
     try:
         short = exchange_code_for_user_token(code)
     except Exception as exc:
         print(f"[facebook] code exchange failed: {exc}", file=sys.stderr)
-        return jsonify({
-            "error": "token_exchange_failed",
-            "message": str(exc),
-        }), 502
+        return redirect(url_for(
+            "search.search_view",
+            facebook="token_exchange_failed",
+        ))
 
     short_token = short.get("access_token")
     if not short_token:
-        return jsonify({
-            "error": "no_access_token",
-            "message": "Facebook did not return an access token.",
-        }), 502
+        return redirect(url_for(
+            "search.search_view",
+            facebook="no_token",
+        ))
 
     # --- Exchange short-lived for long-lived ---
     try:
@@ -128,7 +164,6 @@ def callback():
         expires_in = long_resp.get("expires_in")
     except Exception as exc:
         print(f"[facebook] long-lived exchange failed: {exc}", file=sys.stderr)
-        # Fall back to short token — user will need to reconnect in ~2h.
         long_token = short_token
         expires_in = short.get("expires_in")
 
@@ -143,14 +178,12 @@ def callback():
         for p in pages
     ]
 
-    return jsonify({
-        "status": "connected",
-        "pages_count": len(pages),
-        "pages": [
-            {"id": p["id"], "name": p["name"]}
-            for p in pages
-        ],
-    })
+    # Redirect back to the search page. The frontend JS reads
+    # ?facebook=connected and refreshes the status card.
+    return redirect(url_for("search.search_view", facebook="connected"))
+
+
+
 
 
 # ============================================================
@@ -183,5 +216,4 @@ def disconnect():
     session.pop("facebook_user_token", None)
     session.pop("facebook_token_expires_in", None)
     session.pop("facebook_pages", None)
-    session.pop("facebook_oauth_state", None)
     return jsonify({"status": "disconnected"})

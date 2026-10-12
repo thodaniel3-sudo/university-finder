@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block title %}
+  {% if query %}Explore more: {{ query }}{% else %}Explore more sources{% endif %} — University Finder
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h1 class="fw-bold mb-0">
+            <i class="bi bi-compass me-2"></i>Explore more sources
+        </h1>
+        <a href="{{ url_for('search.search_view', q=query) }}"
+           class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Back to main results
+        </a>
+    </div>
+
+    {% if query %}
+        <p class="text-muted mb-4">
+            Extra results for <strong>"{{ query }}"</strong> — scholarships, academic
+            research, universities, and degree programmes.
+        </p>
+
+        <ul class="nav nav-tabs mb-3" id="extraTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if active_tab == 'scholarships' %}active{% endif %}"
+                        data-bs-toggle="tab"
+                        data-bs-target="#tab-scholarships"
+                        data-tab="scholarships"
+                        type="button" role="tab">
+                    <i class="bi bi-cash-coin me-1"></i>Scholarships
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if active_tab == 'research' %}active{% endif %}"
+                        data-bs-toggle="tab"
+                        data-bs-target="#tab-research"
+                        data-tab="research"
+                        type="button" role="tab">
+                    <i class="bi bi-journal-text me-1"></i>Research
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if active_tab == 'universities' %}active{% endif %}"
+                        data-bs-toggle="tab"
+                        data-bs-target="#tab-universities"
+                        data-tab="universities"
+                        type="button" role="tab">
+                    <i class="bi bi-building me-1"></i>Universities
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if active_tab == 'programmes' %}active{% endif %}"
+                        data-bs-toggle="tab"
+                        data-bs-target="#tab-programmes"
+                        data-tab="programmes"
+                        type="button" role="tab">
+                    <i class="bi bi-mortarboard me-1"></i>Programmes
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="extraTabsContent">
+
+            <div class="tab-pane fade {% if active_tab == 'scholarships' %}show active{% endif %}"
+                 id="tab-scholarships" role="tabpanel">
+                <div id="status-scholarships" class="mb-3">
+                    <div class="alert alert-info mb-0">
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-2"></div>
+                            <span>Loading scholarships…</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="results-scholarships"></div>
+            </div>
+
+            <div class="tab-pane fade {% if active_tab == 'research' %}show active{% endif %}"
+                 id="tab-research" role="tabpanel">
+                <div id="status-research" class="mb-3">
+                    <div class="alert alert-info mb-0">
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-2"></div>
+                            <span>Loading research papers…</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="results-research"></div>
+            </div>
+
+            <div class="tab-pane fade {% if active_tab == 'universities' %}show active{% endif %}"
+                 id="tab-universities" role="tabpanel">
+                <div id="status-universities" class="mb-3">
+                    <div class="alert alert-info mb-0">
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-2"></div>
+                            <span>Loading universities…</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="results-universities"></div>
+            </div>
+
+            <div class="tab-pane fade {% if active_tab == 'programmes' %}show active{% endif %}"
+                 id="tab-programmes" role="tabpanel">
+                <div id="status-programmes" class="mb-3">
+                    <div class="alert alert-info mb-0">
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-2"></div>
+                            <span>Loading programmes…</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="results-programmes"></div>
+            </div>
+
+        </div>
+    {% else %}
+        <div class="card shadow-sm border-0">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-compass" style="font-size: 3rem;"></i>
+                <h4 class="fw-bold mt-3">Explore more sources</h4>
+                <p class="text-muted mb-0">
+                    Go back to the main search and click
+                    <em>Explore more sources</em> to see scholarships, research,
+                    universities, and programmes.
+                </p>
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+
+{% block body_extra %}
+{% if query %}
+<script>
+(function () {
+    "use strict";
+
+    var query = {{ query|tojson }};
+    var loaded = { scholarships: false, research: false, universities: false, programmes: false };
+
+    function escapeHtml(s) {
+        return String(s == null ? "" : s)
+            .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function saveToDatabase(payload, btn) {
+        if (btn.disabled) return;
+        btn.disabled = true;
+        var original = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving…';
+        fetch("/discoveries/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                url: payload.url || "",
+                title: payload.title || "",
+                description: payload.description || "",
+                source_type: payload.source_type || "extra",
+                source_domain: payload.source_domain || "",
+                search_query: query
+            })
+        })
+        .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+        .then(function (data) {
+            if (data && data.saved_count && data.saved_count > 1) {
+                btn.className = "btn btn-sm btn-success";
+                btn.innerHTML = '<i class="bi bi-check2-all me-1"></i>Already saved';
+            } else {
+                btn.className = "btn btn-sm btn-success";
+                btn.innerHTML = '<i class="bi bi-check2 me-1"></i>Saved';
+            }
+        })
+        .catch(function () {
+            btn.disabled = false;
+            btn.className = "btn btn-sm btn-outline-danger";
+            btn.innerHTML = original + " (retry)";
+        });
+    }
+
+    function wireSaveButtons(scope) {
+        (scope || document).querySelectorAll("[data-save]").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                try { saveToDatabase(JSON.parse(btn.getAttribute("data-payload")), btn); }
+                catch (e) { console.error(e); }
+            });
+        });
+    }
+
+    function badgeFor(kind) {
+        var map = {
+            scholarship: ['#198754', 'Scholarship'],
+            research:    ['#0d6efd', 'Research'],
+            university_directory: ['#6f42c1', 'University'],
+            programme:   ['#fd7e14', 'Programme']
+        };
+        var m = map[kind] || ['#6c757d', kind];
+        return '<span class="badge" style="background:' + m[0] + ';">' + m[1] + '</span>';
+    }
+
+    function card(r, kind, meta, payload) {
+        var url = r.url || r.source_url || "";
+        var desc = r.description || "";
+        return '<div class="col-lg-6">' +
+            '<div class="card shadow-sm border-0 h-100">' +
+              '<div class="card-body d-flex flex-column">' +
+                '<div class="mb-2">' + badgeFor(kind) + '</div>' +
+                '<h6 class="fw-bold mb-1">' +
+                  (url ? '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener" class="text-decoration-none text-dark">' + escapeHtml(r.title) + '</a>' : escapeHtml(r.title)) +
+                '</h6>' +
+                (meta ? '<p class="small text-muted mb-2">' + meta + '</p>' : '') +
+                (desc ? '<p class="small mb-3 flex-grow-1">' + escapeHtml(desc) + '</p>' : '<div class="flex-grow-1"></div>') +
+                '<div class="d-flex flex-wrap gap-2">' +
+                  (url ? '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">Open <i class="bi bi-box-arrow-up-right ms-1"></i></a>' : '') +
+                  '<button type="button" class="btn btn-sm btn-outline-success" data-save data-payload=\'' + JSON.stringify(payload).replace(/'/g, "&#39;") + '\'>' +
+                    '<i class="bi bi-database-add me-1"></i>Save to database' +
+                  '</button>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+    }
+
+    function renderScholarship(r) {
+        var url = r.url || r.source_url || "";
+        var payload = { url: url, title: r.title, description: r.description || "", source_type: "scholarship", source_domain: r.provider || "" };
+        var meta = r.provider ? '<i class="bi bi-globe me-1"></i>' + escapeHtml(r.provider) : "";
+        return card(r, "scholarship", meta, payload);
+    }
+
+    function renderResearch(r) {
+        var url = r.url || r.source_url || "";
+        var payload = { url: url, title: r.title, description: r.description || "", source_type: "research", source_domain: "openalex.org" };
+        var meta = [];
+        if (r.authors) meta.push('<i class="bi bi-people me-1"></i>' + escapeHtml(r.authors));
+        if (r.venue)   meta.push('<i class="bi bi-journal me-1"></i>' + escapeHtml(r.venue));
+        if (r.year)    meta.push('<i class="bi bi-calendar3 me-1"></i>' + escapeHtml(r.year));
+        meta.push('<i class="bi bi-quote me-1"></i>' + (r.cited_by || 0));
+        return card(r, "research", meta.join(" · "), payload);
+    }
+
+    function renderUniversity(r) {
+        var url = r.url || r.source_url || "";
+        var payload = { url: url, title: r.title, description: r.description || "", source_type: "university_directory", source_domain: r.domain || "" };
+        var meta = r.domain ? '<i class="bi bi-globe me-1"></i>' + escapeHtml(r.domain) : "";
+        return card(r, "university_directory", meta, payload);
+    }
+
+    function renderProgramme(r) {
+        var url = r.url || r.source_url || "";
+        var payload = { url: url, title: r.title, description: r.description || "", source_type: "programme", source_domain: r.provider || "" };
+        var meta = r.provider ? '<i class="bi bi-globe me-1"></i>' + escapeHtml(r.provider) : "";
+        return card(r, "programme", meta, payload);
+    }
+
+    var renderers = {
+        scholarships: renderScholarship,
+        research: renderResearch,
+        universities: renderUniversity,
+        programmes: renderProgramme
+    };
+
+    function loadTab(tab) {
+        if (loaded[tab]) return;
+        loaded[tab] = true;
+
+        var statusBox = document.getElementById("status-" + tab);
+        var resultsBox = document.getElementById("results-" + tab);
+        if (!statusBox || !resultsBox) return;
+
+        var url = "/extra/api/" + tab + "?q=" + encodeURIComponent(query);
+        var renderer = renderers[tab];
+
+        fetch(url)
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                statusBox.style.display = "none";
+                var total = data.total || 0;
+                var items = data.results || [];
+
+                if (total === 0) {
+                    resultsBox.innerHTML =
+                      '<div class="alert alert-secondary">' +
+                        '<i class="bi bi-info-circle me-1"></i>' +
+                        'No ' + escapeHtml(tab) + ' found for that query.' +
+                      '</div>';
+                    return;
+                }
+
+                resultsBox.innerHTML =
+                  '<h5 class="fw-bold mb-3"><i class="bi bi-list-ul me-2"></i>Results <span class="text-muted fs-6">(' + total + ')</span></h5>' +
+                  '<div class="row g-3">' + items.map(renderer).join("") + '</div>';
+
+                wireSaveButtons(resultsBox);
+            })
+            .catch(function () {
+                statusBox.innerHTML =
+                  '<div class="alert alert-danger mb-0">' +
+                    '<i class="bi bi-exclamation-triangle me-1"></i>' +
+                    'Could not load ' + escapeHtml(tab) + '. The rest of the app is unaffected.' +
+                  '</div>';
+            });
+    }
+
+    document.querySelectorAll('#extraTabs button[data-tab]').forEach(function (btn) {
+        btn.addEventListener("shown.bs.tab", function (e) {
+            loadTab(e.target.getAttribute("data-tab"));
+        });
+    });
+
+    var activeBtn = document.querySelector('#extraTabs button.active[data-tab]');
+    if (activeBtn) loadTab(activeBtn.getAttribute("data-tab"));
+})();
+</script>
+{% endif %}
+{% endblock %}

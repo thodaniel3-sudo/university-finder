@@ -1,525 +1,1463 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}
-    {% if query %}Search: {{ query }}{% else %}Search{% endif %} — University Finder
+{% if query %}Search: {{ query }}{% else %}Search{% endif %} — University Finder
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1 class="fw-bold mb-3">Search</h1>
 
-    <!-- ===== Facebook connection card ===== -->
-    <div class="card shadow-sm border-0 mb-4" id="facebook-card">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
-                <div class="d-flex align-items-start">
-                    <i class="bi bi-facebook text-primary me-3" style="font-size: 2rem;"></i>
-                    <div>
-                        <h5 class="fw-bold mb-1">Facebook</h5>
-                        <p class="text-muted small mb-1" id="fb-description">
-                            Connect to include results from Facebook Pages you administer.
-                            Your password is never shared with this app.
-                        </p>
-                        <p class="small mb-0" id="fb-status-text">Checking status…</p>
-                    </div>
-                </div>
-                <div class="d-flex flex-wrap gap-2" id="fb-actions">
-                    <!-- Populated by facebook_status.js -->
-                </div>
-            </div>
-        </div>
+<div class="container">
+
+```
+<h1 class="fw-bold mb-3">Search</h1>
+
+<h6>
+    Enter your detailed search and click the button below to explore results from different sources.
+</h6>
+
+<!-- =========================================================
+     FACEBOOK STATUS MESSAGES
+     ========================================================= -->
+
+{% if request.args.get('facebook') == 'connected' %}
+
+    <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+        <i class="bi bi-check-circle-fill me-1"></i>
+        Connected to Facebook successfully.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 
-    <!-- ===== Search form ===== -->
-    <form method="get" action="{{ url_for('search.search_view') }}" class="mb-4">
-        <div class="input-group input-group-lg">
-            <input type="text" name="q" class="form-control"
-                   placeholder="Search by programme, field, or country — e.g. &quot;marine biology norway&quot;"
-                   value="{{ query or '' }}" autofocus>
-            <button class="btn btn-primary" type="submit">
-                <i class="bi bi-search"></i> Search
-            </button>
+{% elif request.args.get('facebook') in [
+    'denied',
+    'invalid_state',
+    'missing_code',
+    'token_exchange_failed',
+    'no_token'
+] %}
+
+    <div class="alert alert-warning alert-dismissible fade show mt-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+        Facebook connection was not completed
+        ({{ request.args.get('facebook')|replace('_', ' ') }}).
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+{% elif request.args.get('facebook') == 'disconnected' %}
+
+    <div class="alert alert-info alert-dismissible fade show mt-3" role="alert">
+        <i class="bi bi-info-circle-fill me-1"></i>
+        Disconnected from Facebook.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+{% endif %}
+
+
+<!-- =========================================================
+     SEARCH FORM
+     THIS IS NOW BEFORE FACEBOOK / EXPLORE / AGGREGATED
+     ========================================================= -->
+
+<form method="get"
+      action="{{ url_for('search.search_view') }}"
+      class="mb-4">
+
+    <div class="input-group input-group-lg">
+
+        <input
+            type="text"
+            name="q"
+            class="form-control"
+            placeholder="Search by programme, field, or country — e.g. &quot;marine biology norway&quot;"
+            value="{{ query or '' }}"
+            autofocus
+        >
+
+        <button class="btn btn-primary" type="submit">
+            <i class="bi bi-search"></i>
+            Search
+        </button>
+
+    </div>
+
+</form>
+
+
+<!-- =========================================================
+     SEARCH-RELATED OPTIONS
+     THESE NOW APPEAR AFTER THE SEARCH BAR
+     ========================================================= -->
+
+<div class="row g-3 mb-4">
+
+    <!-- =====================================================
+         FACEBOOK CONNECTION CARD
+         ===================================================== -->
+
+    <div class="col-lg-4">
+
+        <div class="card shadow-sm border-0 h-100" id="facebook-card">
+
+            <div class="card-body d-flex flex-column">
+
+                <div class="d-flex align-items-start mb-2">
+
+                    <i
+                        class="bi bi-facebook text-primary me-2"
+                        style="font-size: 1.6rem;"
+                    ></i>
+
+                    <h5 class="fw-bold mb-0">
+                        Facebook
+                    </h5>
+
+                </div>
+
+                <p class="text-muted small mb-1" id="fb-description">
+                    Connect to include results from Facebook Pages you administer.
+                    Your password is never shared with this app.
+                </p>
+
+                <p class="small mb-3" id="fb-status-text">
+                    Checking status…
+                </p>
+
+                <div
+                    class="mt-auto d-flex flex-wrap gap-2"
+                    id="fb-actions"
+                >
+                    <!-- Populated by facebook_status.js -->
+                </div>
+
+            </div>
+
         </div>
-    </form>
 
-    {% if query %}
-        <p class="text-muted mb-4">
-            Results for <strong>"{{ query }}"</strong>
-        </p>
+    </div>
 
-        <!-- ===== From our database ===== -->
-        <h4 class="fw-bold mb-3">
-            <i class="bi bi-database me-2 text-success"></i>
-            From our first database
+
+    <!-- =====================================================
+         EXPLORE MORE SOURCES CARD
+         ===================================================== -->
+
+    <div class="col-lg-4">
+
+        <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-body d-flex flex-column">
+
+                <div class="d-flex align-items-start mb-2">
+
+                    <i
+                        class="bi bi-compass me-2"
+                        style="font-size: 1.6rem;"
+                    ></i>
+
+                    <h5 class="fw-bold mb-0">
+                        Explore more sources
+                    </h5>
+
+                </div>
+
+                <p class="text-muted small mb-3">
+                    Scholarships, academic research, and the world university
+                    directory — all in one place.
+                </p>
+
+                <a
+                    href="{{ url_for('extra.search_view', q=query) }}"
+                    class="btn btn-outline-primary mt-auto"
+                >
+                    Open Explore more
+                    <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         AGGREGATED VIEW CARD
+         ===================================================== -->
+
+    <div class="col-lg-4">
+
+        <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-body d-flex flex-column">
+
+                <div class="d-flex align-items-start mb-2">
+
+                    <i
+                        class="bi bi-diagram-3 me-2"
+                        style="font-size: 1.6rem;"
+                    ></i>
+
+                    <h5 class="fw-bold mb-0">
+                        Aggregated view
+                    </h5>
+
+                </div>
+
+                <p class="text-muted small mb-3">
+                    News, university identity, research papers, and publications
+                    — all in one page.
+                </p>
+
+                <a
+                    href="{{ url_for('aggregated.index', q=query) }}"
+                    class="btn btn-outline-primary mt-auto"
+                >
+                    Open Aggregated
+                    <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     SEARCH RESULTS
+     ========================================================= -->
+
+{% if query %}
+
+    <p class="text-muted mb-4">
+        Results for <strong>"{{ query }}"</strong>
+    </p>
+
+
+    <!-- =====================================================
+         FROM OUR DATABASE
+         ===================================================== -->
+
+    <h4 class="fw-bold mb-3">
+
+        <i class="bi bi-database me-2 text-success"></i>
+
+        From our first database
+
+        <span class="text-muted fs-6">
+            ({{ results.db_programme_total + results.db_university_total }})
+        </span>
+
+    </h4>
+
+
+    <!-- =====================================================
+         DATABASE PROGRAMMES
+         ===================================================== -->
+
+    {% if results.db_programmes %}
+
+        <h6 class="text-muted small mb-2">
+            Programmes ({{ results.db_programme_total }})
+        </h6>
+
+        <div class="row g-3 mb-4">
+
+            {% for p in results.db_programmes %}
+
+                {% set uni = p.universities if p.universities is mapping else (p.universities[0] if p.universities else {}) %}
+
+                <div class="col-md-6 col-lg-4">
+
+                    <div class="card h-100 shadow-sm border-0">
+
+                        <div class="card-body">
+
+                            <h6 class="fw-bold mb-1">
+
+                                <a
+                                    href="{{ url_for('programmes.detail_view', programme_id=p.id) }}"
+                                    class="text-decoration-none"
+                                >
+                                    {{ p.programme_name }}
+                                </a>
+
+                            </h6>
+
+                            <p class="small text-muted mb-2">
+
+                                <i class="bi bi-building me-1"></i>
+
+                                {{ uni.name or "—" }}
+
+                                {% if uni.country %}
+                                    · {{ uni.country }}
+                                {% endif %}
+
+                            </p>
+
+                            <p class="small mb-0">
+
+                                <span class="badge bg-primary">
+                                    {{ p.degree_level }}
+                                </span>
+
+                                {% if p.field %}
+                                    <span class="badge bg-info text-dark">
+                                        {{ p.field }}
+                                    </span>
+                                {% endif %}
+
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         DATABASE UNIVERSITIES
+         ===================================================== -->
+
+    {% if results.db_universities %}
+
+        <h6 class="text-muted small mb-2">
+            Universities ({{ results.db_university_total }})
+        </h6>
+
+        <div class="row g-3 mb-4">
+
+            {% for u in results.db_universities %}
+
+                <div class="col-md-6 col-lg-4">
+
+                    <div class="card h-100 shadow-sm border-0">
+
+                        <div class="card-body">
+
+                            <h6 class="fw-bold mb-1">
+
+                                <a
+                                    href="{{ url_for('universities.detail_view', university_id=u.id) }}"
+                                    class="text-decoration-none"
+                                >
+                                    {{ u.name }}
+                                </a>
+
+                            </h6>
+
+                            <p class="small text-muted mb-0">
+
+                                <i class="bi bi-geo-alt me-1"></i>
+
+                                {{ u.city }}
+
+                                {% if u.city and u.country %}
+                                    ,
+                                {% endif %}
+
+                                {{ u.country }}
+
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         NO DATABASE RESULTS
+         ===================================================== -->
+
+    {% if results.db_programme_total == 0 and results.db_university_total == 0 %}
+
+        <div class="alert alert-secondary">
+
+            <i class="bi bi-info-circle me-1"></i>
+
+            Nothing in our first database matches that search —
+            see the sources below.
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         DATABASE PAGINATION
+         ===================================================== -->
+
+    {% if results.db_total_pages > 1 %}
+
+        <nav class="mb-4" aria-label="Search results pages">
+
+            <ul class="pagination justify-content-center">
+
+                <li
+                    class="page-item {% if results.db_page <= 1 %}disabled{% endif %}"
+                >
+
+                    <a
+                        class="page-link"
+                        href="{{ url_for(
+                            'search.search_view',
+                            q=query,
+                            page=results.db_page - 1
+                        ) }}"
+                    >
+                        &laquo; Previous
+                    </a>
+
+                </li>
+
+
+                {% for p in range(1, results.db_total_pages + 1) %}
+
+                    {% if
+                        p == 1
+                        or p == results.db_total_pages
+                        or (p >= results.db_page - 2 and p <= results.db_page + 2)
+                    %}
+
+                        <li
+                            class="page-item {% if p == results.db_page %}active{% endif %}"
+                        >
+
+                            <a
+                                class="page-link"
+                                href="{{ url_for(
+                                    'search.search_view',
+                                    q=query,
+                                    page=p
+                                ) }}"
+                            >
+                                {{ p }}
+                            </a>
+
+                        </li>
+
+                    {% elif
+                        p == results.db_page - 3
+                        or p == results.db_page + 3
+                    %}
+
+                        <li class="page-item disabled">
+
+                            <span class="page-link">
+                                …
+                            </span>
+
+                        </li>
+
+                    {% endif %}
+
+                {% endfor %}
+
+
+                <li
+                    class="page-item {% if results.db_page >= results.db_total_pages %}disabled{% endif %}"
+                >
+
+                    <a
+                        class="page-link"
+                        href="{{ url_for(
+                            'search.search_view',
+                            q=query,
+                            page=results.db_page + 1
+                        ) }}"
+                    >
+                        Next &raquo;
+                    </a>
+
+                </li>
+
+            </ul>
+
+            <p class="text-center text-muted small">
+                Page {{ results.db_page }} of {{ results.db_total_pages }}
+            </p>
+
+        </nav>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         UNIVERSITY PORTALS
+         ===================================================== -->
+
+    {% if results.university_results %}
+
+        <h4 class="fw-bold mb-3 mt-5">
+
+            <i class="bi bi-mortarboard me-2 text-warning"></i>
+
+            From university portals
+
             <span class="text-muted fs-6">
-                ({{ results.db_programme_total + results.db_university_total }})
+                ({{ results.university_results|length }})
             </span>
+
         </h4>
 
-        {% if results.db_programmes %}
-            <h6 class="text-muted small mb-2">
-                Programmes ({{ results.db_programme_total }})
-            </h6>
-            <div class="row g-3 mb-4">
-                {% for p in results.db_programmes %}
-                    {% set uni = p.universities if p.universities is mapping else (p.universities[0] if p.universities else {}) %}
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card h-100 shadow-sm border-0">
-                            <div class="card-body">
-                                <h6 class="fw-bold mb-1">
-                                    <a href="{{ url_for('programmes.detail_view', programme_id=p.id) }}"
-                                       class="text-decoration-none">
-                                        {{ p.programme_name }}
-                                    </a>
-                                </h6>
-                                <p class="small text-muted mb-2">
-                                    <i class="bi bi-building me-1"></i>{{ uni.name or "—" }}
-                                    {% if uni.country %}· {{ uni.country }}{% endif %}
-                                </p>
-                                <p class="small mb-0">
-                                    <span class="badge bg-primary">{{ p.degree_level }}</span>
-                                    {% if p.field %}<span class="badge bg-info text-dark">{{ p.field }}</span>{% endif %}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-
-        {% if results.db_universities %}
-            <h6 class="text-muted small mb-2">
-                Universities ({{ results.db_university_total }})
-            </h6>
-            <div class="row g-3 mb-4">
-                {% for u in results.db_universities %}
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card h-100 shadow-sm border-0">
-                            <div class="card-body">
-                                <h6 class="fw-bold mb-1">
-                                    <a href="{{ url_for('universities.detail_view', university_id=u.id) }}"
-                                       class="text-decoration-none">
-                                        {{ u.name }}
-                                    </a>
-                                </h6>
-                                <p class="small text-muted mb-0">
-                                    <i class="bi bi-geo-alt me-1"></i>
-                                    {{ u.city }}{% if u.city and u.country %}, {% endif %}{{ u.country }}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-
-        {% if results.db_programme_total == 0 and results.db_university_total == 0 %}
-            <div class="alert alert-secondary">
-                <i class="bi bi-info-circle me-1"></i>
-                Nothing in our first database matches that search — see the sources below.
-            </div>
-        {% endif %}
-
-        <!-- ===== DB pagination ===== -->
-        {% if results.db_total_pages > 1 %}
-            <nav class="mb-4" aria-label="Search results pages">
-                <ul class="pagination justify-content-center">
-                    <li class="page-item {% if results.db_page <= 1 %}disabled{% endif %}">
-                        <a class="page-link"
-                           href="{{ url_for('search.search_view', q=query, page=results.db_page - 1) }}">
-                            &laquo; Previous
-                        </a>
-                    </li>
-                    {% for p in range(1, results.db_total_pages + 1) %}
-                        {% if p == 1 or p == results.db_total_pages or (p >= results.db_page - 2 and p <= results.db_page + 2) %}
-                            <li class="page-item {% if p == results.db_page %}active{% endif %}">
-                                <a class="page-link"
-                                   href="{{ url_for('search.search_view', q=query, page=p) }}">
-                                    {{ p }}
-                                </a>
-                            </li>
-                        {% elif p == results.db_page - 3 or p == results.db_page + 3 %}
-                            <li class="page-item disabled"><span class="page-link">…</span></li>
-                        {% endif %}
-                    {% endfor %}
-                    <li class="page-item {% if results.db_page >= results.db_total_pages %}disabled{% endif %}">
-                        <a class="page-link"
-                           href="{{ url_for('search.search_view', q=query, page=results.db_page + 1) }}">
-                            Next &raquo;
-                        </a>
-                    </li>
-                </ul>
-                <p class="text-center text-muted small">
-                    Page {{ results.db_page }} of {{ results.db_total_pages }}
-                </p>
-            </nav>
-        {% endif %}
+        <p class="text-muted small mb-3">
+            Direct links to official university pages about programmes,
+            admissions, scholarships, and tuition.
+        </p>
 
 
+        <div class="row g-3 mb-4">
 
+            {% for r in results.university_results %}
 
+                <div class="col-lg-6">
 
-        <!-- ===== University portals ===== -->
-        {% if results.university_results %}
-            <h4 class="fw-bold mb-3 mt-5">
-                <i class="bi bi-mortarboard me-2 text-warning"></i>
-                From university portals
-                <span class="text-muted fs-6">({{ results.university_results|length }})</span>
-            </h4>
-            <p class="text-muted small mb-3">
-                Direct links to official university pages about programmes,
-                admissions, scholarships, and tuition.
-            </p>
+                    <div class="card shadow-sm border-0 h-100">
 
-            <div class="row g-3 mb-4">
-                {% for r in results.university_results %}
-                    <div class="col-lg-6">
-                        <div class="card shadow-sm border-0 h-100">
-                            <div class="card-body d-flex flex-column">
-                                <div class="mb-2">
-                                    <span class="badge bg-warning text-dark">University official</span>
-                                    {% if r.page_type and r.page_type != "other" %}
-                                        <span class="badge bg-info text-dark ms-1">{{ r.page_type|capitalize }}</span>
-                                    {% endif %}
-                                </div>
-                                <h6 class="fw-bold mb-1">{{ r.title }}</h6>
-                                <p class="small text-muted mb-2">
-                                    <i class="bi bi-globe me-1"></i>{{ r.source }}
-                                </p>
-                                <p class="small mb-3 flex-grow-1">{{ r.description }}</p>
+                        <div class="card-body d-flex flex-column">
 
-                                <div class="d-flex flex-wrap gap-2">
-                                    <a href="{{ r.url }}" target="_blank" rel="noopener noreferrer"
-                                       class="btn btn-sm btn-outline-primary">
-                                        Visit page <i class="bi bi-box-arrow-up-right ms-1"></i>
-                                    </a>
+                            <div class="mb-2">
 
-                                    {% if r.source %}
-                                        <a href="https://search.brave.com/search?q=site%3A{{ r.source|urlencode }}+admissions+email"
-                                           target="_blank" rel="noopener noreferrer"
-                                           class="btn btn-sm btn-outline-secondary">
-                                            <i class="bi bi-envelope me-1"></i>Find email
-                                        </a>
-                                    {% endif %}
+                                <span class="badge bg-warning text-dark">
+                                    University official
+                                </span>
 
-                                    {% if current_user %}
-                                        <form method="post" action="{{ url_for('external.save_view') }}" class="d-inline">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <input type="hidden" name="title" value="{{ r.title }}">
-                                            <input type="hidden" name="url" value="{{ r.url }}">
-                                            <input type="hidden" name="source_domain" value="{{ r.source }}">
-                                            <input type="hidden" name="description" value="{{ r.description }}">
-                                            <input type="hidden" name="search_query" value="{{ query }}">
-                                            <button type="submit" class="btn btn-sm btn-primary">
-                                                <i class="bi bi-bookmark-plus me-1"></i>Save
-                                            </button>
-                                        </form>
-                                    {% else %}
-                                        <a href="{{ url_for('auth.login') }}?next={{ request.full_path|urlencode }}"
-                                           class="btn btn-sm btn-outline-secondary">
-                                            <i class="bi bi-bookmark-plus me-1"></i>Log in to save
-                                        </a>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
+                                {% if r.page_type and r.page_type != "other" %}
 
-        <!-- ===== Facebook results ===== -->
-        {% if results.facebook_connected %}
-            <h4 class="fw-bold mb-3 mt-5">
-                <i class="bi bi-facebook me-2 text-primary"></i>
-                From your Facebook Pages
-                <span class="text-muted fs-6">({{ results.facebook_results|length }})</span>
-            </h4>
+                                    <span class="badge bg-info text-dark ms-1">
+                                        {{ r.page_type|capitalize }}
+                                    </span>
 
-            {% if results.facebook_results %}
-                <p class="text-muted small mb-3">
-                    Recent posts from {{ results.facebook_pages_count }}
-                    {% if results.facebook_pages_count == 1 %}Page{% else %}Pages{% endif %}
-                    that match your search.
-                </p>
-                <div class="row g-3 mb-4">
-                    {% for r in results.facebook_results %}
-                        <div class="col-lg-6">
-                            <div class="card shadow-sm border-0 h-100">
-                                <div class="card-body d-flex flex-column">
-                                    <div class="mb-2">
-                                        <span class="badge bg-primary">Facebook</span>
-                                        {% if r.organization %}
-                                            <span class="badge bg-secondary ms-1">{{ r.organization }}</span>
-                                        {% endif %}
-                                    </div>
-                                    <h6 class="fw-bold mb-1">{{ r.title or "(no title)" }}</h6>
-                                    {% if r.published_at %}
-                                        <p class="small text-muted mb-2">
-                                            <i class="bi bi-calendar-event me-1"></i>{{ r.published_at }}
-                                        </p>
-                                    {% endif %}
-                                    <p class="small mb-3 flex-grow-1">{{ r.description }}</p>
-                                    {% if r.source_url %}
-                                        <div class="d-flex flex-wrap gap-2">
-                                            <a href="{{ r.source_url }}" target="_blank" rel="noopener noreferrer"
-                                               class="btn btn-sm btn-outline-primary">
-                                                View on Facebook <i class="bi bi-box-arrow-up-right ms-1"></i>
-                                            </a>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="alert alert-secondary">
-                    <i class="bi bi-info-circle me-1"></i>
-                    No recent posts on your Facebook Pages match this query.
-                    {% if results.facebook_pages_count == 0 %}
-                        Your account does not currently administer any Pages.
-                    {% endif %}
-                </div>
-            {% endif %}
-        {% endif %}
-        
-
-        <!-- ===== Web section ===== -->
-        {% if results.web_results %}
-            <h4 class="fw-bold mb-3 mt-5">
-                <i class="bi bi-globe me-2 text-primary"></i>
-                From the open web
-                <span class="text-muted fs-6">({{ results.web_results|length }})</span>
-            </h4>
-
-            <div class="row g-3 mb-4">
-                {% for r in results.web_results %}
-                    <div class="col-lg-6">
-                        <div class="card shadow-sm border-0 h-100">
-                            <div class="card-body d-flex flex-column">
-                                <h6 class="fw-bold mb-1">{{ r.title }}</h6>
-                                <p class="small text-muted mb-2">
-                                    <i class="bi bi-globe me-1"></i>{{ r.source }}
-                                </p>
-                                <p class="small mb-3 flex-grow-1">{{ r.description }}</p>
-                                <div class="d-flex flex-wrap gap-2">
-                                    <a href="{{ r.url }}" target="_blank" rel="noopener noreferrer"
-                                       class="btn btn-sm btn-outline-primary">
-                                        Visit page <i class="bi bi-box-arrow-up-right ms-1"></i>
-                                    </a>
-                                    {% if r.source %}
-                                        <a href="https://search.brave.com/search?q=site%3A{{ r.source|urlencode }}+admissions+email"
-                                           target="_blank" rel="noopener noreferrer"
-                                           class="btn btn-sm btn-outline-secondary">
-                                            <i class="bi bi-envelope me-1"></i>Find email
-                                        </a>
-                                    {% endif %}
-                                    {% if current_user %}
-                                        <form method="post" action="{{ url_for('external.save_view') }}" class="d-inline">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <input type="hidden" name="title" value="{{ r.title }}">
-                                            <input type="hidden" name="url" value="{{ r.url }}">
-                                            <input type="hidden" name="source_domain" value="{{ r.source }}">
-                                            <input type="hidden" name="description" value="{{ r.description }}">
-                                            <input type="hidden" name="search_query" value="{{ query }}">
-                                            <button type="submit" class="btn btn-sm btn-primary">
-                                                <i class="bi bi-bookmark-plus me-1"></i>Save
-                                            </button>
-                                        </form>
-                                    {% else %}
-                                        <a href="{{ url_for('auth.login') }}?next={{ request.full_path|urlencode }}"
-                                           class="btn btn-sm btn-outline-secondary">
-                                            <i class="bi bi-bookmark-plus me-1"></i>Log in to save
-                                        </a>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        {% elif results.web_available %}
-            <div class="alert alert-info mt-4">
-                <i class="bi bi-info-circle-fill me-1"></i>
-                <strong>No web results found for that exact query.</strong>
-                Try broader keywords.
-            </div>
-        {% else %}
-            <div class="alert alert-info mt-4">
-                <i class="bi bi-info-circle-fill me-1"></i>
-                <strong>Web search is not configured yet.</strong>
-                Only results from our database are shown above.
-            </div>
-        {% endif %}
-
-
-        
-
-        <!-- ===== YouTube results ===== -->
-        {% if results.youtube_results %}
-            <h4 class="fw-bold mb-3 mt-5">
-                <i class="bi bi-youtube me-2 text-danger"></i>
-                From YouTube
-                <span class="text-muted fs-6">({{ results.youtube_results|length }})</span>
-            </h4>
-            <p class="text-muted small mb-3">
-                Videos from official university channels and other creators.
-            </p>
-
-            <div class="row g-3 mb-4">
-                {% for r in results.youtube_results %}
-                    <div class="col-lg-6">
-                        <div class="card shadow-sm border-0 h-100">
-                            <div class="card-body d-flex flex-column">
-                                <div class="mb-2">
-                                    <span class="badge bg-danger">YouTube</span>
-                                    {% if r.organization %}
-                                        <span class="badge bg-secondary ms-1">{{ r.organization }}</span>
-                                    {% endif %}
-                                </div>
-                                <h6 class="fw-bold mb-1">{{ r.title }}</h6>
-                                <p class="small text-muted mb-2">
-                                    <i class="bi bi-person-circle me-1"></i>{{ r.organization }}
-                                    {% if r.published_at %}
-                                        · {{ r.published_at[:10] }}
-                                    {% endif %}
-                                </p>
-                                <p class="small mb-3 flex-grow-1">{{ r.description[:220] }}{% if r.description|length > 220 %}…{% endif %}</p>
-                                <div class="d-flex flex-wrap gap-2">
-                                    <a href="{{ r.website_url }}" target="_blank" rel="noopener noreferrer"
-                                       class="btn btn-sm btn-danger">
-                                        Watch <i class="bi bi-box-arrow-up-right ms-1"></i>
-                                    </a>
-                                    {% if r.channel_url %}
-                                        <a href="{{ r.channel_url }}" target="_blank" rel="noopener noreferrer"
-                                           class="btn btn-sm btn-outline-secondary">
-                                            Channel
-                                        </a>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-
-
-
-
-
-
-                <!-- ===== From the shared discovery catalog ===== -->
-        {% if results.discovery_results %}
-            <h4 class="fw-bold mb-3 mt-5">
-                <i class="bi bi-stars me-2 text-success"></i>
-                From our growing catalog
-                <span class="text-muted fs-6">({{ results.discovery_results|length }})</span>
-            </h4>
-            <p class="text-muted small mb-3">
-                Pages other users have saved. Free to read — no external calls.
-            </p>
-
-            <div class="row g-3 mb-4">
-                {% for r in results.discovery_results %}
-                    <div class="col-lg-6">
-                        <div class="card shadow-sm border-0 h-100">
-                            <div class="card-body d-flex flex-column">
-                                <div class="mb-2">
-                                    <span class="badge bg-success">Catalog</span>
-                                    {% if r.source_type %}
-                                        <span class="badge bg-secondary ms-1">{{ r.source_type }}</span>
-                                    {% endif %}
-                                    {% if r.verified %}
-                                        <span class="badge bg-info text-dark ms-1">Verified</span>
-                                    {% endif %}
-                                </div>
-                                <h6 class="fw-bold mb-1">{{ r.title }}</h6>
-                                {% if r.organization or r.source %}
-                                    <p class="small text-muted mb-2">
-                                        {% if r.organization %}
-                                            <i class="bi bi-building me-1"></i>{{ r.organization }}
-                                        {% endif %}
-                                        {% if r.source %}
-                                            · <i class="bi bi-globe me-1"></i>{{ r.source }}
-                                        {% endif %}
-                                    </p>
                                 {% endif %}
-                                <p class="small mb-3 flex-grow-1">{{ r.description[:220] }}{% if r.description|length > 220 %}…{% endif %}</p>
-                                <div class="d-flex flex-wrap gap-2">
-                                    <a href="{{ r.website_url }}" target="_blank" rel="noopener noreferrer"
-                                       class="btn btn-sm btn-outline-primary">
-                                        Visit page <i class="bi bi-box-arrow-up-right ms-1"></i>
-                                    </a>
-                                </div>
+
                             </div>
+
+
+                            <h6 class="fw-bold mb-1">
+                                {{ r.title }}
+                            </h6>
+
+
+                            <p class="small text-muted mb-2">
+
+                                <i class="bi bi-globe me-1"></i>
+
+                                {{ r.source }}
+
+                            </p>
+
+
+                            <p class="small mb-3 flex-grow-1">
+                                {{ r.description }}
+                            </p>
+
+
+                            <div class="d-flex flex-wrap gap-2">
+
+                                <a
+                                    href="{{ r.url }}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="btn btn-sm btn-outline-primary"
+                                >
+                                    Visit page
+                                    <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                </a>
+
+
+                                {% if r.source %}
+
+                                    <a
+                                        href="https://search.brave.com/search?q=site%3A{{ r.source|urlencode }}+admissions+email"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="btn btn-sm btn-outline-secondary"
+                                    >
+                                        <i class="bi bi-envelope me-1"></i>
+                                        Find email
+                                    </a>
+
+                                {% endif %}
+
+
+                                {% if current_user %}
+
+                                    <form
+                                        method="post"
+                                        action="{{ url_for('external.save_view') }}"
+                                        class="d-inline"
+                                    >
+
+                                        <input
+                                            type="hidden"
+                                            name="csrf_token"
+                                            value="{{ csrf_token() }}"
+                                        >
+
+                                        <input
+                                            type="hidden"
+                                            name="title"
+                                            value="{{ r.title }}"
+                                        >
+
+                                        <input
+                                            type="hidden"
+                                            name="url"
+                                            value="{{ r.url }}"
+                                        >
+
+                                        <input
+                                            type="hidden"
+                                            name="source_domain"
+                                            value="{{ r.source }}"
+                                        >
+
+                                        <input
+                                            type="hidden"
+                                            name="description"
+                                            value="{{ r.description }}"
+                                        >
+
+                                        <input
+                                            type="hidden"
+                                            name="search_query"
+                                            value="{{ query }}"
+                                        >
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-sm btn-primary"
+                                        >
+                                            <i class="bi bi-bookmark-plus me-1"></i>
+                                            Save
+                                        </button>
+
+                                    </form>
+
+                                {% else %}
+
+                                    <a
+                                        href="{{ url_for('auth.login') }}?next={{ request.full_path|urlencode }}"
+                                        class="btn btn-sm btn-outline-secondary"
+                                    >
+                                        <i class="bi bi-bookmark-plus me-1"></i>
+                                        Log in to save
+                                    </a>
+
+                                {% endif %}
+
+                            </div>
+
                         </div>
+
                     </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         FACEBOOK RESULTS
+         ===================================================== -->
+
+    {% if results.facebook_connected %}
+
+        <h4 class="fw-bold mb-3 mt-5">
+
+            <i class="bi bi-facebook me-2 text-primary"></i>
+
+            From your Facebook Pages
+
+            <span class="text-muted fs-6">
+                ({{ results.facebook_results|length }})
+            </span>
+
+        </h4>
+
+
+        {% if results.facebook_results %}
+
+            <p class="text-muted small mb-3">
+
+                Recent posts from
+                {{ results.facebook_pages_count }}
+
+                {% if results.facebook_pages_count == 1 %}
+                    Page
+                {% else %}
+                    Pages
+                {% endif %}
+
+                that match your search.
+
+            </p>
+
+
+            <div class="row g-3 mb-4">
+
+                {% for r in results.facebook_results %}
+
+                    <div class="col-lg-6">
+
+                        <div class="card shadow-sm border-0 h-100">
+
+                            <div class="card-body d-flex flex-column">
+
+                                <div class="mb-2">
+
+                                    <span class="badge bg-primary">
+                                        Facebook
+                                    </span>
+
+                                    {% if r.organization %}
+
+                                        <span class="badge bg-secondary ms-1">
+                                            {{ r.organization }}
+                                        </span>
+
+                                    {% endif %}
+
+                                </div>
+
+
+                                <h6 class="fw-bold mb-1">
+                                    {{ r.title or "(no title)" }}
+                                </h6>
+
+
+                                {% if r.published_at %}
+
+                                    <p class="small text-muted mb-2">
+
+                                        <i class="bi bi-calendar-event me-1"></i>
+
+                                        {{ r.published_at }}
+
+                                    </p>
+
+                                {% endif %}
+
+
+                                <p class="small mb-3 flex-grow-1">
+                                    {{ r.description }}
+                                </p>
+
+
+                                {% if r.source_url %}
+
+                                    <div class="d-flex flex-wrap gap-2">
+
+                                        <a
+                                            href="{{ r.source_url }}"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="btn btn-sm btn-outline-primary"
+                                        >
+                                            View on Facebook
+                                            <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                        </a>
+
+                                    </div>
+
+                                {% endif %}
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
                 {% endfor %}
+
             </div>
+
+        {% else %}
+
+            <div class="alert alert-secondary">
+
+                <i class="bi bi-info-circle me-1"></i>
+
+                No recent posts on your Facebook Pages match this query.
+
+                {% if results.facebook_pages_count == 0 %}
+
+                    Your account does not currently administer any Pages.
+
+                {% endif %}
+
+            </div>
+
         {% endif %}
 
-
-        <!-- ===== Request a programme ===== -->
-        <div class="card shadow-sm border-0 mt-4">
-            <div class="card-body">
-                <h5 class="fw-bold mb-3">
-                    <i class="bi bi-send-plus me-2"></i>Can't find what you're looking for?
-                </h5>
-                <p class="text-muted small mb-3">
-                    Tell us which programme you want us to add, and we'll try
-                    to include it in a future update.
-                </p>
-                <form method="post" action="{{ url_for('search.request_programme') }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="query" value="{{ query }}">
-
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label small">Programme you're looking for</label>
-                            <input type="text" class="form-control"
-                                   value="{{ query }}" readonly>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small">
-                                Your email (optional — so we can notify you)
-                            </label>
-                            <input type="email" name="contact_email" class="form-control"
-                                   placeholder="you@example.com">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label small">Anything else we should know?</label>
-                            <textarea name="notes" class="form-control" rows="2"
-                                      placeholder="e.g. specific university or country preference"></textarea>
-                        </div>
-                        <div class="col-12">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-send me-1"></i>Submit request
-                            </button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-    {% else %}
-        <div class="card shadow-sm border-0">
-            <div class="card-body text-center py-5">
-                <i class="bi bi-search" style="font-size: 3rem; color: #adb5bd;"></i>
-                <h4 class="fw-bold mt-3">Try a search</h4>
-                <p class="text-muted mb-0">
-                    Enter a programme name, field, or country above.
-                    Examples: <em>Materials Science Germany</em>,
-                    <em>Marine Biology Norway</em>,
-                    <em>MBA Canada</em>.
-                </p>
-            </div>
-        </div>
     {% endif %}
+
+
+    <!-- =====================================================
+         OPEN WEB
+         ===================================================== -->
+
+    {% if results.web_results %}
+
+        <h4 class="fw-bold mb-3 mt-5">
+
+            <i class="bi bi-globe me-2 text-primary"></i>
+
+            From the open web
+
+            <span class="text-muted fs-6">
+                ({{ results.web_results|length }})
+            </span>
+
+        </h4>
+
+
+        <div class="row g-3 mb-4">
+
+            {% for r in results.web_results %}
+
+                <div class="col-lg-6">
+
+                    <div class="card shadow-sm border-0 h-100">
+
+                        <div class="card-body d-flex flex-column">
+
+                            <h6 class="fw-bold mb-1">
+                                {{ r.title }}
+                            </h6>
+
+
+                            <p class="small text-muted mb-2">
+
+                                <i class="bi bi-globe me-1"></i>
+
+                                {{ r.source }}
+
+                            </p>
+
+
+                            <p class="small mb-3 flex-grow-1">
+                                {{ r.description }}
+                            </p>
+
+
+                            <div class="d-flex flex-wrap gap-2">
+
+                                <a
+                                    href="{{ r.url }}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="btn btn-sm btn-outline-primary"
+                                >
+                                    Visit page
+                                    <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                </a>
+
+
+                                {% if r.source %}
+
+                                    <a
+                                        href="https://search.brave.com/search?q=site%3A{{ r.source|urlencode }}+admissions+email"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="btn btn-sm btn-outline-secondary"
+                                    >
+                                        <i class="bi bi-envelope me-1"></i>
+                                        Find email
+                                    </a>
+
+                                {% endif %}
+
+
+                                {% if current_user %}
+
+                                    <form
+                                        method="post"
+                                        action="{{ url_for('external.save_view') }}"
+                                        class="d-inline"
+                                    >
+
+                                        <input
+                                            type="hidden"
+                                            name="csrf_token"
+                                            value="{{ csrf_token() }}"
+                                        >
+
+                                        <input
+                                            type="hidden"
+                                            name="title"
+                                            value="{{ r.title }}"
+                                        >
+
+                                        <input
+                                            type="hidden"
+                                            name="url"
+                                            value="{{ r.url }}"
+                                        >
+
+                                        <input
+                                            type="hidden"
+                                            name="source_domain"
+                                            value="{{ r.source }}"
+                                        >
+
+                                        <input
+                                            type="hidden"
+                                            name="description"
+                                            value="{{ r.description }}"
+                                        >
+
+                                        <input
+                                            type="hidden"
+                                            name="search_query"
+                                            value="{{ query }}"
+                                        >
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-sm btn-primary"
+                                        >
+                                            <i class="bi bi-bookmark-plus me-1"></i>
+                                            Save
+                                        </button>
+
+                                    </form>
+
+                                {% else %}
+
+                                    <a
+                                        href="{{ url_for('auth.login') }}?next={{ request.full_path|urlencode }}"
+                                        class="btn btn-sm btn-outline-secondary"
+                                    >
+                                        <i class="bi bi-bookmark-plus me-1"></i>
+                                        Log in to save
+                                    </a>
+
+                                {% endif %}
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+
+    {% elif results.web_available %}
+
+        <div class="alert alert-info mt-4">
+
+            <i class="bi bi-info-circle-fill me-1"></i>
+
+            <strong>
+                No web results found for that exact query.
+            </strong>
+
+            Try broader keywords.
+
+        </div>
+
+
+    {% else %}
+
+        <div class="alert alert-info mt-4">
+
+            <i class="bi bi-info-circle-fill me-1"></i>
+
+            <strong>
+                Web search is not configured yet.
+            </strong>
+
+            Only results from our database are shown above.
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         YOUTUBE RESULTS
+         ===================================================== -->
+
+    {% if results.youtube_results %}
+
+        <h4 class="fw-bold mb-3 mt-5">
+
+            <i class="bi bi-youtube me-2 text-danger"></i>
+
+            From YouTube
+
+            <span class="text-muted fs-6">
+                ({{ results.youtube_results|length }})
+            </span>
+
+        </h4>
+
+
+        <p class="text-muted small mb-3">
+            Videos from official university channels and other creators.
+        </p>
+
+
+        <div class="row g-3 mb-4">
+
+            {% for r in results.youtube_results %}
+
+                <div class="col-lg-6">
+
+                    <div class="card shadow-sm border-0 h-100">
+
+                        <div class="card-body d-flex flex-column">
+
+                            <div class="mb-2">
+
+                                <span class="badge bg-danger">
+                                    YouTube
+                                </span>
+
+                                {% if r.organization %}
+
+                                    <span class="badge bg-secondary ms-1">
+                                        {{ r.organization }}
+                                    </span>
+
+                                {% endif %}
+
+                            </div>
+
+
+                            <h6 class="fw-bold mb-1">
+                                {{ r.title }}
+                            </h6>
+
+
+                            <p class="small text-muted mb-2">
+
+                                <i class="bi bi-person-circle me-1"></i>
+
+                                {{ r.organization }}
+
+                                {% if r.published_at %}
+                                    · {{ r.published_at[:10] }}
+                                {% endif %}
+
+                            </p>
+
+
+                            <p class="small mb-3 flex-grow-1">
+
+                                {{ r.description[:220] }}
+
+                                {% if r.description|length > 220 %}
+                                    …
+                                {% endif %}
+
+                            </p>
+
+
+                            <div class="d-flex flex-wrap gap-2">
+
+                                <a
+                                    href="{{ r.website_url }}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="btn btn-sm btn-danger"
+                                >
+                                    Watch
+                                    <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                </a>
+
+
+                                {% if r.channel_url %}
+
+                                    <a
+                                        href="{{ r.channel_url }}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="btn btn-sm btn-outline-secondary"
+                                    >
+                                        Channel
+                                    </a>
+
+                                {% endif %}
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         SHARED DISCOVERY CATALOG
+         ===================================================== -->
+
+    {% if results.discovery_results %}
+
+        <h4 class="fw-bold mb-3 mt-5">
+
+            <i class="bi bi-stars me-2 text-success"></i>
+
+            From our growing catalog
+
+            <span class="text-muted fs-6">
+                ({{ results.discovery_results|length }})
+            </span>
+
+        </h4>
+
+
+        <p class="text-muted small mb-3">
+            Pages other users have saved. Free to read — no external calls.
+        </p>
+
+
+        <div class="row g-3 mb-4">
+
+            {% for r in results.discovery_results %}
+
+                <div class="col-lg-6">
+
+                    <div class="card shadow-sm border-0 h-100">
+
+                        <div class="card-body d-flex flex-column">
+
+                            <div class="mb-2">
+
+                                <span class="badge bg-success">
+                                    Catalog
+                                </span>
+
+
+                                {% if r.source_type %}
+
+                                    <span class="badge bg-secondary ms-1">
+                                        {{ r.source_type }}
+                                    </span>
+
+                                {% endif %}
+
+
+                                {% if r.verified %}
+
+                                    <span class="badge bg-info text-dark ms-1">
+                                        Verified
+                                    </span>
+
+                                {% endif %}
+
+                            </div>
+
+
+                            <h6 class="fw-bold mb-1">
+                                {{ r.title }}
+                            </h6>
+
+
+                            {% if r.organization or r.source %}
+
+                                <p class="small text-muted mb-2">
+
+                                    {% if r.organization %}
+
+                                        <i class="bi bi-building me-1"></i>
+                                        {{ r.organization }}
+
+                                    {% endif %}
+
+
+                                    {% if r.source %}
+
+                                        ·
+                                        <i class="bi bi-globe me-1"></i>
+                                        {{ r.source }}
+
+                                    {% endif %}
+
+                                </p>
+
+                            {% endif %}
+
+
+                            <p class="small mb-3 flex-grow-1">
+
+                                {{ r.description[:220] }}
+
+                                {% if r.description|length > 220 %}
+                                    …
+                                {% endif %}
+
+                            </p>
+
+
+                            <div class="d-flex flex-wrap gap-2">
+
+                                <a
+                                    href="{{ r.website_url }}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="btn btn-sm btn-outline-primary"
+                                >
+                                    Visit page
+                                    <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                </a>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         REDDIT / NEXT PAGE
+         ===================================================== -->
+
+    <div class="card shadow-sm border-0 mt-4">
+
+        <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
+
+            <div>
+
+                <h5 class="fw-bold mb-1">
+
+                    <i
+                        class="bi bi-reddit me-2"
+                        style="color:#ff4500;"
+                    ></i>
+
+                    Looking for student discussions?
+
+                </h5>
+
+                <p class="text-muted small mb-0">
+                    Page 2 shows threads and posts from Reddit about your query.
+                </p>
+
+            </div>
+
+
+            <a
+                href="{{ url_for('reddit.search_view', q=query) }}"
+                class="btn btn-outline-primary"
+            >
+                Next page — Reddit discussions
+                <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         REQUEST A PROGRAMME
+         ===================================================== -->
+
+    <div class="card shadow-sm border-0 mt-4">
+
+        <div class="card-body">
+
+            <h5 class="fw-bold mb-3">
+
+                <i class="bi bi-send-plus me-2"></i>
+
+                Can't find what you're looking for?
+
+            </h5>
+
+
+            <p class="text-muted small mb-3">
+
+                Tell us which programme you want us to add, and we'll try
+                to include it in a future update.
+
+            </p>
+
+
+            <form
+                method="post"
+                action="{{ url_for('search.request_programme') }}"
+            >
+
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                >
+
+                <input
+                    type="hidden"
+                    name="query"
+                    value="{{ query }}"
+                >
+
+
+                <div class="row g-3">
+
+                    <div class="col-md-6">
+
+                        <label class="form-label small">
+                            Programme you're looking for
+                        </label>
+
+                        <input
+                            type="text"
+                            class="form-control"
+                            value="{{ query }}"
+                            readonly
+                        >
+
+                    </div>
+
+
+                    <div class="col-md-6">
+
+                        <label class="form-label small">
+                            Your email (optional — so we can notify you)
+                        </label>
+
+                        <input
+                            type="email"
+                            name="contact_email"
+                            class="form-control"
+                            placeholder="you@example.com"
+                        >
+
+                    </div>
+
+
+                    <div class="col-12">
+
+                        <label class="form-label small">
+                            Anything else we should know?
+                        </label>
+
+                        <textarea
+                            name="notes"
+                            class="form-control"
+                            rows="2"
+                            placeholder="e.g. specific university or country preference"
+                        ></textarea>
+
+                    </div>
+
+
+                    <div class="col-12">
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary"
+                        >
+                            <i class="bi bi-send me-1"></i>
+                            Submit request
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+{% else %}
+
+
+    <!-- =====================================================
+         NO SEARCH YET
+         ===================================================== -->
+
+    <div class="card shadow-sm border-0">
+
+        <div class="card-body text-center py-5">
+
+            <i
+                class="bi bi-search"
+                style="font-size: 3rem; color: #adb5bd;"
+            ></i>
+
+
+            <h4 class="fw-bold mt-3">
+                Try a search
+            </h4>
+
+
+            <p class="text-muted mb-0">
+
+                Enter a programme name, field, or country above.
+
+                Examples:
+
+                <em>Materials Science Germany</em>,
+
+                <em>Marine Biology Norway</em>,
+
+                <em>MBA Canada</em>.
+
+            </p>
+
+        </div>
+
+    </div>
+
+
+{% endif %}
+```
+
 </div>
+
 {% endblock %}
 
 {% block body_extra %}
+
 <script src="{{ url_for('static', filename='js/facebook_status.js') }}"></script>
+
 <script src="{{ url_for('static', filename='js/discovery_save.js') }}"></script>
+
 {% endblock %}
