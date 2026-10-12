@@ -5,8 +5,8 @@ from datetime import datetime
 
 from flask import Flask, render_template
 from flask_wtf.csrf import CSRFProtect
-from routes.discovery_routes import discovery_bp
 from config import Config
+
 from routes.admin_routes import admin_bp
 from routes.application_routes import application_bp
 from routes.auth_routes import auth_bp
@@ -19,12 +19,14 @@ from routes.programme_routes import programme_bp
 from routes.saved_routes import saved_bp
 from routes.search_routes import search_bp
 from routes.university_routes import university_bp
-from services.auth_decorators import current_user
-from services.rate_limit import limiter
+from routes.discovery_routes import discovery_bp
 from routes.reddit_routes import reddit_bp
 from routes.aggregated_sources_routes import aggregated_bp
 from routes.apify_sources_routes import apify_bp
 from routes.extra_sources_routes import extra_bp
+
+from services.auth_decorators import current_user
+from services.rate_limit import limiter
 
 
 def create_app(config_class=Config):
@@ -33,6 +35,10 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
 
     # ----- Trust X-Forwarded-* headers from Vercel -----
+    # Vercel rewrites every request to Render and forwards the original
+    # host (university-finder.me) via X-Forwarded-Host. ProxyFix tells
+    # Flask to trust those headers so url_for() and request.host_url
+    # produce university-finder.me URLs, not the internal Render hostname.
     from werkzeug.middleware.proxy_fix import ProxyFix
 
     app.wsgi_app = ProxyFix(
@@ -48,15 +54,12 @@ def create_app(config_class=Config):
     csrf = CSRFProtect()
     csrf.init_app(app)
 
-    from routes.discovery_routes import discovery_bp as _discovery_bp
-    csrf.exempt(_discovery_bp)
+    # Exempt JSON-only blueprints from CSRF protection.
+    csrf.exempt(discovery_bp)
+    csrf.exempt(apify_bp)
+    csrf.exempt(facebook_bp)
 
-    from routes.apify_sources_routes import apify_bp as _apify_bp
-    csrf.exempt(_apify_bp)
-
-    from routes.facebook_routes import facebook_bp as _facebook_bp
-    csrf.exempt(_facebook_bp)
-
+    # Rate limiter
     limiter.init_app(app)
 
     # ----- CORS for the Vercel frontend -----
@@ -109,20 +112,18 @@ def create_app(config_class=Config):
     # ----- API preflight -----
     @app.route("/api/v1/<path:_any>", methods=["OPTIONS"])
     def api_options(_any):
-        """Preflight requests for the JSON API."""
         return ("", 204)
 
     # ----- Template context processors -----
     @app.context_processor
     def inject_globals():
-        """Variables available to every template."""
         return {
             "current_year": datetime.now().year,
             "current_user": current_user(),
             "preferred_host": app.config.get("PREFERRED_HOST", ""),
         }
 
-    # ----- Blueprints -----
+    # ----- Blueprints (each registered exactly once) -----
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(profile_bp)
